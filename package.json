@@ -1,0 +1,15 @@
+{
+  "name": "luna-grader",
+  "version": "0.6.1",
+  "private": true,
+  "description": "Keyboard-driven grading for LUNA assignment downloads, running entirely in the browser.",
+  "scripts": {
+    "build": "node src/build.js"
+  },
+  "devDependencies": {
+    "docx-preview": "0.4.1",
+    "heic-to": "1.6.7",
+    "jszip": "3.10.2",
+    "xlsx": "0.18.5"
+  }
+}

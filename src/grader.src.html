@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LUNA Grader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e2e0db;
+  --accent:#2f5d8a; --accent-soft:#e6eef6; --ok:#2e7d4f; --ok-soft:#e5f3ea; --flag:#b26a00; --flag-soft:#fbf0dc; --late:#b3261e; --late-soft:#fbe4e2;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;color:var(--ink)}
+button:hover{border-color:#bdbab3}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.link{border:0;background:none;color:var(--accent);padding:0;text-decoration:underline}
+input,textarea,select{font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff;width:100%}
+input:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:#fff;color:var(--muted)}
+.badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:1px}
+.badge.late{background:var(--late);color:#fff;font-weight:700;letter-spacing:.04em}
+#lateBanner{background:var(--late);color:#fff;font-weight:700;padding:9px 14px;font-size:15px;letter-spacing:.02em;display:flex;gap:10px;align-items:center}
+#lateBanner .when{font-weight:400;opacity:.9;font-size:13px}
+.stu.isLate{background:#fdf1f0;box-shadow:inset 3px 0 0 var(--late)}
+.stu.isLate.active{background:#f7dcd9}
+#stuHead.isLate{border-left:4px solid var(--late);padding-left:10px}
+#stuHead .lateLine{display:none;color:var(--late);font-weight:700;margin-top:4px}
+#stuHead.isLate .lateLine{display:block}
+.badge.warn{background:var(--flag-soft);color:var(--flag)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.hint{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+
+/* ---- screens ---- */
+#home,#assignScreen{position:fixed;inset:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:8vh 20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 32px;width:min(640px,100%);line-height:1.55}
+.card h1{font-size:21px;margin:0 0 4px}
+.card .sub{color:var(--muted);margin:0 0 18px}
+.choice{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;margin-bottom:8px;border-radius:10px}
+.choice:hover{border-color:var(--accent);background:#fafcfe}
+.choice .t{font-weight:600;font-size:15px}
+.choice .d{color:var(--muted);font-size:12px;word-break:break-all}
+.choice .num{font-family:var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex:none}
+.choice .grow{flex:1;min-width:0}
+.choice.disabled{opacity:.6;cursor:default}
+.foot-links{margin-top:18px;display:flex;gap:16px;flex-wrap:wrap}
+
+/* ---- grading layout ---- */
+#app{display:grid;grid-template-columns:270px 1fr 340px;grid-template-rows:44px 1fr;height:100vh}
+header{grid-column:1/4;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+header .crumb{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .spacer{flex:1}
+#progress{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+#syncState{font-size:12px;color:var(--muted);white-space:nowrap}
+#sidebar{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+#sidebar .tools{padding:8px;display:flex;gap:6px;border-bottom:1px solid var(--line)}
+#sidebar .tools input{padding:4px 8px}
+#list{overflow:auto;flex:1}
+.stu{padding:7px 10px;border-bottom:1px solid #f0eee9;cursor:pointer;display:flex;gap:8px;align-items:center}
+.stu:hover{background:#faf9f7}
+.stu.active{background:var(--accent-soft)}
+.stu .dot{width:8px;height:8px;border-radius:50%;background:#d6d3cc;flex:none}
+.stu.graded .dot{background:var(--ok)}
+.stu.flagged .dot{background:var(--flag)}
+.stu.none{color:var(--muted)}
+.stu .who{flex:1;min-width:0}
+.stu .id{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stu .sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stu .sc{font-variant-numeric:tabular-nums;color:var(--ok);font-weight:600}
+#viewer{display:flex;flex-direction:column;min-width:0;min-height:0}
+#filebar{display:flex;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);background:#fbfaf8;overflow-x:auto;white-space:nowrap;min-height:38px}
+.ftab{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;background:#fff;cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.ftab.active{border-color:var(--accent);background:var(--accent-soft)}
+#stage{flex:1;overflow:auto;position:relative;background:#e9e7e2}
+#stage .center{display:flex;align-items:flex-start;justify-content:center;min-height:100%;padding:16px}
+#stage img{max-width:100%;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff;transform-origin:center}
+#stage img.actual{max-width:none}
+#stage iframe{width:100%;height:100%;border:0;display:block;background:#fff}
+.fmtwrap{position:sticky;top:0;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.fmtbar{background:#fff;border-bottom:1px solid var(--line);padding:7px 12px;font-size:12px;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.fmtbar .chip{border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#faf9f7;white-space:nowrap}
+.fmtbar .chip.ok{border-color:#9fd0b2;background:var(--ok-soft);color:#1f5e3a}
+.fmtbar .chip.bad{border-color:#e6a39d;background:var(--late-soft);color:var(--late);font-weight:600}
+.fmtbar .chip.warn{border-color:#efcf95;background:var(--flag-soft);color:var(--flag)}
+.fmtbar .chip b{font-weight:600}
+.fmtdetail{background:#fff;border-bottom:1px solid var(--line);padding:8px 14px 12px;font-size:12px;max-height:45vh;overflow:auto}
+.fmtdetail table{border-collapse:collapse;width:100%}
+.fmtdetail td{border:0!important;border-bottom:1px solid #f0eee9!important;padding:3px 8px 3px 0!important;vertical-align:top;font-size:12px!important}
+.fmtdetail td:first-child{color:var(--muted);white-space:nowrap;width:130px}
+.docxhost{padding:0}
+.docxhost .docx-wrapper{background:transparent!important;padding:20px 0 40px!important}
+.docxhost .docx-wrapper>section.docx{box-shadow:0 1px 5px rgba(0,0,0,.18)!important;margin-bottom:20px!important}
+#stage .doc{background:#fff;max-width:820px;width:100%;padding:40px 56px;box-shadow:0 1px 4px rgba(0,0,0,.12);line-height:1.6}
+#stage .doc img{max-width:100%;box-shadow:none}
+#stage pre{background:#fff;padding:20px;max-width:900px;width:100%;white-space:pre-wrap;font-family:var(--mono);font-size:13px}
+#stage table{border-collapse:collapse;background:#fff}
+#stage td,#stage th{border:1px solid var(--line);padding:3px 6px;font-size:12px}
+#stage video{max-width:100%;max-height:80vh;background:#000}
+#stage .msg{color:var(--muted);text-align:center;margin-top:12vh;line-height:1.8}
+#panel{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+#panel .body{padding:14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:14px}
+.label{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between}
+#stuName{font-size:17px;font-weight:600;word-break:break-word}
+#stuMeta{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.6}
+#score{font-size:22px;font-weight:600;padding:6px 10px;font-variant-numeric:tabular-nums}
+.scorewrap{display:flex;align-items:center;gap:8px}
+.scorewrap .max{color:var(--muted);white-space:nowrap}
+#quick{display:flex;flex-wrap:wrap;gap:6px}
+#quick button{min-width:44px;font-variant-numeric:tabular-nums}
+#quick button kbd{margin-left:4px}
+#comment{min-height:120px;resize:vertical;line-height:1.5}
+#bank{display:flex;flex-direction:column;gap:4px}
+#bank button{text-align:left;font-size:12px;display:flex;gap:6px;align-items:flex-start;white-space:normal}
+#bank button kbd{flex:none}
+.row{display:flex;gap:6px;align-items:center}
+.flagbtn.on{background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}
+#panel .foot{border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:6px}
+#panel .foot button{flex:1}
+#saved{font-size:12px;color:var(--ok);height:14px}
+
+.modal{position:fixed;inset:0;background:rgba(20,20,20,.35);display:none;align-items:center;justify-content:center;z-index:10}
+.modal.open{display:flex}
+.modal .mcard{background:#fff;border-radius:10px;width:min(720px,92vw);max-height:88vh;overflow:auto;padding:20px 24px;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.modal h2{margin:0 0 12px;font-size:17px}
+.modal h3{font-size:13px;margin:18px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.modal .grid{display:grid;grid-template-columns:180px 1fr;gap:8px 12px;align-items:center}
+.keys td{padding:3px 10px 3px 0;vertical-align:top}
+.classrow{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;margin-bottom:6px}
+.classrow .d{grid-column:1/4;font-size:12px;color:var(--muted);margin:-2px 0 6px 2px}
+#drop.over{outline:3px dashed var(--accent);outline-offset:-12px}
+</style>
+</head>
+<body>
+
+<!-- ============ HOME: choose a class ============ -->
+<div id="home">
+  <div class="card" id="drop">
+    <h1>Which class are you grading?</h1>
+    <p class="sub">Press a number or click a class. The first time, you'll be asked to choose that class's folder once; after that it is remembered.</p>
+    <div id="classList"></div>
+    <div class="foot-links">
+      <button class="link" id="homeSettings">Edit classes and settings</button>
+      <button class="link" id="openAny">Open any other folder…</button>
+      <button class="link" id="homeHelp">Keyboard shortcuts</button>
+    </div>
+    <p class="hint" id="versionLine" style="margin:14px 0 0;text-align:right"></p>
+    <p id="browserWarn" class="hint hidden" style="margin-top:14px;color:var(--late)">This browser can't remember folders. Please open this file in Google Chrome (or Microsoft Edge).</p>
+  </div>
+</div>
+
+<!-- ============ ASSIGNMENTS for a class ============ -->
+<div id="assignScreen" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:4px">
+      <h1 id="asTitle"></h1>
+      <button id="asBack">← Classes</button>
+    </div>
+    <p class="sub" id="asSub"></p>
+    <div id="assignList"></div>
+    <div class="foot-links">
+      <button class="link" id="asRefresh">Refresh (R)</button>
+      <button class="link" id="asRepick">Choose a different folder for this class</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GRADING ============ -->
+<div id="app" class="hidden">
+  <header>
+    <button id="backBtn" title="Back to assignments (Esc twice)">←</button>
+    <span class="crumb" id="crumb"></span>
+    <span class="spacer"></span>
+    <span id="syncState"></span>
+    <span id="progress"></span>
+    <button id="saveUpload" class="primary">Save LUNA upload file</button>
+    <button id="exportCsv" class="hidden">Export CSV</button>
+    <button id="exportXlsx" class="hidden">Export Excel</button>
+    <button id="settingsBtn">Settings</button>
+    <button id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+  </header>
+
+  <aside id="sidebar">
+    <div class="tools">
+      <input id="search" placeholder="Search  ( / )">
+      <select id="filter" style="width:auto">
+        <option value="sub">Submitted</option>
+        <option value="todo">Ungraded</option>
+        <option value="done">Graded</option>
+        <option value="flag">Flagged</option>
+        <option value="late">Late</option>
+        <option value="none">No submission</option>
+        <option value="all">Everyone</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </aside>
+
+  <main id="viewer">
+    <div id="lateBanner" class="hidden"></div>
+    <div id="filebar"></div>
+    <div id="stage"></div>
+  </main>
+
+  <section id="panel">
+    <div class="body">
+      <div id="stuHead">
+        <div id="stuName"></div>
+        <div id="stuMeta"></div>
+        <div class="lateLine">LATE SUBMISSION</div>
+      </div>
+      <div>
+        <div class="label"><span>Score <kbd>S</kbd></span><span id="saved"></span></div>
+        <div class="scorewrap"><input id="score" inputmode="decimal" autocomplete="off"><span class="max" id="maxLabel"></span></div>
+      </div>
+      <div>
+        <div class="label"><span>Quick scores (press the number key)</span></div>
+        <div id="quick"></div>
+      </div>
+      <div>
+        <div class="label"><span>Feedback comment <kbd>C</kbd></span><span id="charCount"></span></div>
+        <textarea id="comment" placeholder="Feedback for the student…"></textarea>
+      </div>
+      <div>
+        <div class="label"><span><span id="bankTitle">Comment bank</span> (<kbd>Alt</kbd>+number)</span><button class="link" id="editBank" style="font-size:12px">edit</button></div>
+        <div id="bank"></div>
+      </div>
+      <div class="row">
+        <button id="flagBtn" class="flagbtn">Flag for later <kbd>F</kbd></button>
+      </div>
+    </div>
+    <div class="foot">
+      <button id="prevBtn">← Prev <kbd>K</kbd></button>
+      <button id="nextBtn" class="primary">Next <kbd>J</kbd></button>
+    </div>
+  </section>
+</div>
+
+<input type="file" id="dirInput" webkitdirectory multiple class="hidden">
+
+<!-- ============ SETTINGS ============ -->
+<div class="modal" id="settingsModal"><div class="mcard">
+  <h2>Settings</h2>
+  <h3>Classes</h3>
+  <div id="classEdit"></div>
+  <button id="addClass">+ Add a class</button>
+  <div class="hint" style="margin-top:6px">Each class remembers one folder: the class folder itself or its “LUNA Assignments” sub-folder.</div>
+  <h3>Scores and comment bank</h3>
+  <div class="grid" style="margin-bottom:10px"><label for="setScope">Settings for</label><select id="setScope"></select>
+  <span></span><span class="hint">Each class can have its own maximum score, quick scores and comment bank. A class with nothing of its own uses the default.</span></div>
+  <div class="grid">
+    <label for="setMax">Maximum score</label><input id="setMax" placeholder="e.g. 10 (leave empty for none)">
+    <label for="setQuick">Quick scores</label><input id="setQuick" placeholder="e.g. 10, 8, 6, 4, 0">
+    <span></span><span class="hint">Comma-separated. The first nine are assigned to keys 1–9.</span>
+  </div>
+  <h3>Word formatting requirements (optional)</h3>
+  <div class="grid">
+    <label for="reqFont">Font</label><input id="reqFont" placeholder="e.g. Times New Roman">
+    <label for="reqSize">Font size (pt)</label><input id="reqSize" placeholder="e.g. 12">
+    <label for="reqLine">Line spacing</label><input id="reqLine" placeholder="e.g. 2 (double), 1.5, 1">
+    <label for="reqMargins">Margins</label><input id="reqMargins" placeholder="e.g. 2.54 cm or 1 in">
+    <label for="reqPaper">Paper size</label><input id="reqPaper" placeholder="e.g. A4">
+    <label for="reqWords">Words (min–max)</label><input id="reqWords" placeholder="e.g. 250-400">
+    <span></span><span class="hint">Shown in green or red above each Word file. Leave a box empty to skip that check.</span>
+  </div>
+  <h3>Comment bank</h3>
+  <textarea id="setBank" rows="6" placeholder="One comment per line"></textarea>
+  <div class="hint">One per line. The first nine can be added with Alt+1 … Alt+9.</div>
+  <div class="row" style="margin-top:18px;justify-content:flex-end">
+    <button id="settingsCancel">Cancel</button><button id="settingsSave" class="primary">Save</button>
+  </div>
+</div></div>
+
+<!-- ============ HELP ============ -->
+<div class="modal" id="helpModal"><div class="mcard">
+  <h2>Keyboard shortcuts</h2>
+  <table class="keys">
+    <tr><td><kbd>1</kbd> … <kbd>9</kbd> (start screens)</td><td>Choose a class / an assignment</td></tr>
+    <tr><td><kbd>J</kbd> or <kbd>↓</kbd></td><td>Next student</td></tr>
+    <tr><td><kbd>K</kbd> or <kbd>↑</kbd></td><td>Previous student</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Next <i>ungraded</i> student</td></tr>
+    <tr><td><kbd>→</kbd> / <kbd>←</kbd></td><td>Next / previous file of the same student</td></tr>
+    <tr><td><kbd>1</kbd> … <kbd>9</kbd></td><td>Quick score</td></tr>
+    <tr><td><kbd>S</kbd></td><td>Type a score</td></tr>
+    <tr><td><kbd>C</kbd></td><td>Type a comment</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>9</kbd></td><td>Add a comment from the bank (works while typing too)</td></tr>
+    <tr><td><kbd>Enter</kbd> (in score)</td><td>Move to the comment box</td></tr>
+    <tr><td><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Save and go to the next student (works while typing)</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Leave the text box so shortcuts work again (twice: back to the assignment list)</td></tr>
+    <tr><td><kbd>F</kbd></td><td>Flag / unflag this student</td></tr>
+    <tr><td><kbd>Z</kbd></td><td>Image or Word page: fit to window / actual size</td></tr>
+    <tr><td><kbd>I</kbd></td><td>Word: show / hide the full formatting details</td></tr>
+    <tr><td><kbd>W</kbd></td><td>Word: open the student's file in Word</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Image: rotate 90°</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>Audio/video: play / pause</td></tr>
+    <tr><td><kbd>O</kbd></td><td>Open the current file in a new tab</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Search students</td></tr>
+    <tr><td><kbd>?</kbd></td><td>This help</td></tr>
+  </table>
+  <p class="hint">If you click inside a PDF, the PDF viewer takes the keyboard; press <kbd>Esc</kbd> or click the side panel to get the shortcuts back.</p>
+  <div class="row" style="justify-content:flex-end"><button id="helpClose" class="primary">Close</button></div>
+</div></div>
+
+<script>/*XLSX*/</script>
+<script>/*JSZIP*/</script>
+<script>/*DOCXPREVIEW*/</script>
+<script type="text/plain" id="heicLib">/*HEICTO*/</script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const VERSION = "0.6.1";
+const LS_SETTINGS = "lunaGrader.settings.v2";
+const DEFAULTS = {
+  max: "10", quick: "10, 9, 8, 7, 6, 5, 0",
+  bank: "Well done.\nPlease check the assignment instructions.\nGood ideas, but proofread for grammar and spelling.\nSubmitted late.\nFile could not be opened; please resubmit.",
+  classes: /*PERSONAL*/[
+    {id:"ecs1", name:"English Communication Skills I"},
+    {id:"ccc",  name:"Cross-cultural Communication"},
+    {id:"aw",   name:"Academic Writing"}
+  ]/*END*/
+};
+let settings = Object.assign({}, DEFAULTS, safeJSON(localStorage.getItem(LS_SETTINGS)) || {});
+// One-time updates to saved settings (each runs once per browser)
+const MIGRATIONS = {
+  /*PERSONAL*/"ccc-quick-0-5-10": st => {               // 異文化理解: only 0 / half / full, on keys 1-2-3
+    st.perClass = st.perClass || {};
+    const prev = st.perClass.ccc || {max:st.max, quick:st.quick, bank:st.bank};
+    st.perClass.ccc = Object.assign({}, prev, {max:"10", quick:"0, 5, 10"});
+  }/*END*/
+};
+settings.migrated = settings.migrated || [];
+for (const [k, fn] of Object.entries(MIGRATIONS)) if (!settings.migrated.includes(k)){ fn(settings); settings.migrated.push(k); localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
+function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)) }
+
+function safeJSON(s){ try{ return JSON.parse(s) }catch(e){ return null } }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])) }
+function extOf(n){ const m = /\.([^.\/]+)$/.exec(n); return m ? m[1].toLowerCase() : "" }
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}` }
+function weekNum(s){ const m = /week[\s_]*0*(\d+)/i.exec(s||""); return m ? +m[1] : null }
+function normTitle(s){ return String(s||"").toLowerCase().replace(/[_\s]+/g," ").trim() }
+function show(screen){
+  for (const id of ["home","assignScreen","app"]) $(id).classList.toggle("hidden", id !== screen);
+  closeModals();
+}
+function flash(msg, ms=2200){
+  let el = $("toast");
+  if (!el){ el = document.createElement("div"); el.id="toast"; el.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;z-index:30;transition:opacity .3s;max-width:80vw;text-align:center"; document.body.appendChild(el) }
+  el.textContent = msg; el.style.opacity = 1; clearTimeout(flash.t); flash.t = setTimeout(() => el.style.opacity = 0, ms);
+}
+
+/* ================= IndexedDB (remembers folder handles) ================= */
+const idb = {
+  db: null,
+  open(){ return this.db || (this.db = new Promise((res, rej) => { const r = indexedDB.open("luna-grader", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })) },
+  async get(k){ const db = await this.open(); return new Promise((res, rej) => { const r = db.transaction("kv").objectStore("kv").get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) }) },
+  async set(k, v){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv","readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error) }) },
+  async del(k){ const db = await this.open(); return new Promise(res => { const t = db.transaction("kv","readwrite"); t.objectStore("kv").delete(k); t.oncomplete = res }) }
+};
+
+/* ================= State ================= */
+let mode = "class";        // "class" | "generic"
+let curClass = null;       // {id,name}
+let lunaDir = null;        // FileSystemDirectoryHandle of "LUNA Assignments"
+let assignments = [];      // scanned
+let A = null;              // current assignment
+let students = [];         // {key,id,name,time,status,late,rows:[], files:[]}
+let grades = {};           // key -> {score, comment, flag, t}
+let cur = 0, curFile = 0, view = [];
+let imgState = {actual:false, rot:0};
+let genericKey = "";
+
+/* ================= HOME ================= */
+function renderHome(){
+  if (!window.showDirectoryPicker) $("browserWarn").classList.remove("hidden");
+  Promise.all(settings.classes.map(c => idb.get("dir:" + c.id).catch(() => null))).then(hs => {
+    $("classList").innerHTML = settings.classes.map((c,i) => `
+      <button class="choice" data-c="${i}">
+        <span class="num">${i<9 ? i+1 : ""}</span>
+        <span class="grow"><div class="t">${esc(c.name)}</div><div class="d">${hs[i] ? "Folder: " + esc(hs[i].name) : "Folder not chosen yet — you'll be asked once"}</div></span>
+      </button>`).join("") || `<div style="border:1px dashed var(--line);border-radius:10px;padding:16px 18px;line-height:1.6">
+          <b>Welcome!</b> Start by adding the classes you grade.<br>
+          <span class="hint">For each class, make a folder called <b>LUNA Assignments</b> inside that class's folder on your computer, and put LUNA's downloads there. See the instructions on the page where you found this grader.</span><br>
+          <button class="primary" style="margin-top:10px" onclick="openSettings()">Add classes</button></div>`;
+  });
+}
+$("classList").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) openClass(settings.classes[+b.dataset.c]) });
+$("homeSettings").addEventListener("click", openSettings);
+$("homeHelp").addEventListener("click", () => $("helpModal").classList.add("open"));
+$("openAny").addEventListener("click", openGeneric);
+
+async function verify(handle){
+  const opts = {mode:"readwrite"};
+  if ((await handle.queryPermission(opts)) === "granted") return true;
+  return (await handle.requestPermission(opts)) === "granted";
+}
+async function pickClassFolder(cls){
+  const h = await window.showDirectoryPicker({id: ("luna-" + cls.id).slice(0,32).replace(/[^\w-]/g,"_"), mode:"readwrite"});
+  await idb.set("dir:" + cls.id, h);
+  return h;
+}
+async function resolveLuna(h){
+  if (/luna/i.test(h.name)) return h;
+  for await (const [name, sub] of h.entries()){
+    if (sub.kind === "directory" && /luna/i.test(name) && /assign/i.test(name)) return sub;
+  }
+  for await (const [name, sub] of h.entries()){
+    if (sub.kind === "directory" && /luna/i.test(name)) return sub;
+  }
+  if (confirm(`There is no “LUNA Assignments” folder inside “${h.name}”. Create one now?`)){
+    return await h.getDirectoryHandle("LUNA Assignments", {create:true});
+  }
+  return null;
+}
+async function openClass(cls, repick=false){
+  if (!window.showDirectoryPicker){ alert("Please open this file in Google Chrome or Microsoft Edge."); return; }
+  try{
+    let h = repick ? null : await idb.get("dir:" + cls.id);
+    if (!h){
+      alert(`Choose the folder for “${cls.name}”.\n\nYou can pick the class folder itself or its “LUNA Assignments” folder. You only need to do this once.`);
+      h = await pickClassFolder(cls);
+    }
+    if (!(await verify(h))){ flash("Permission to use the folder was not given."); return; }
+    const luna = await resolveLuna(h);
+    if (!luna) return;
+    mode = "class"; curClass = cls; lunaDir = luna;
+    await showAssignments();
+  }catch(e){
+    if (e.name === "AbortError") return;
+    if (e.name === "NotFoundError"){ alert(`The folder for “${cls.name}” can't be found any more (was it moved or renamed?). Please choose it again.`); await idb.del("dir:" + cls.id); return openClass(cls, true); }
+    console.error(e); alert("Could not open the folder: " + e.message);
+  }
+}
+
+/* ================= ASSIGNMENTS ================= */
+async function readSheet(fileHandle){
+  const f = await fileHandle.getFile();
+  const wb = XLSX.read(await f.arrayBuffer(), {type:"array", raw:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:"", blankrows:true});
+  // locate header row: first row containing "Student ID"
+  let h = aoa.findIndex(r => r.some(v => /student id/i.test(String(v))));
+  if (h < 0) h = 0;
+  const head = aoa[h].map(v => String(v).replace(/^\[#\]/,"").trim());
+  const col = re => head.findIndex(v => re.test(v));
+  const cols = {
+    id: col(/^student id/i), uid: col(/^user id$/i), name: col(/^name$/i),
+    score: col(/^score$/i), grade: col(/^grade$/i), comment: col(/^feedback comments?$/i),
+    file: col(/^file name$/i), assign: col(/^assignment name$/i), time: col(/^submission date/i), status: col(/^submission status$/i)
+  };
+  const rows = [];
+  for (let i = h+1; i < aoa.length; i++){
+    const r = aoa[i]; const id = String(r[cols.id] ?? "").trim();
+    if (!id || !/\d/.test(id) || !/^[\w-]{3,18}$/.test(id)) continue;          // skips the "Required / Input format / Input limit" rows
+    rows.push({
+      rowNum: i + range.s.r + 1,
+      id, name: String(r[cols.name] ?? "").trim(),
+      assign: String(r[cols.assign] ?? "").trim(), time: String(r[cols.time] ?? "").trim(), status: String(r[cols.status] ?? "").trim(),
+      file: cols.file >= 0 ? String(r[cols.file] ?? "").trim() : "",
+      score: cols.score >= 0 ? r[cols.score] : (cols.grade >= 0 ? r[cols.grade] : ""), comment: cols.comment >= 0 ? String(r[cols.comment] ?? "") : ""
+    });
+  }
+  return {cols, rows, title: (rows.find(r => r.assign) || {}).assign || ""};
+}
+async function scanLuna(){
+  const formats = [], batches = [], notes = [];
+  for await (const [name, h] of lunaDir.entries()){
+    if (name.startsWith(".")) continue;
+    if (h.kind === "file"){
+      let m;
+      if ((m = /assignment_comment_format_(\d+)\.xlsx$/i.exec(name))) formats.push({cid:m[1], handle:h, name});
+      else if (/\.zip$/i.test(name)) notes.push(`“${name}” is still zipped. Double-click it in Finder to unzip it, then press Refresh.`);
+      else if (/\.(crdownload|download|part)$/i.test(name)) notes.push(`A download is still in progress (${name}). Press Refresh when it has finished.`);
+    } else if (/assignment_status_/i.test(name)){
+      const m = /assignment_status_(.+?)_(\d+)_(\d{12})$/i.exec(name);
+      const b = {handle:h, name, title: m ? m[1].replace(/_/g," ") : name, cid:null, inner:null, files:[]};
+      for await (const [fn, fh] of h.entries()){
+        if (fn.startsWith(".")) continue;
+        let mm;
+        if (fh.kind === "file" && (mm = /^assignment_comment_(\d+)\.xlsx$/i.exec(fn))){ b.cid = mm[1]; b.inner = fh; }
+        else if (fh.kind === "file" && (mm = /assignment_comment_format_(\d+)\.xlsx$/i.exec(fn))) formats.push({cid:mm[1], handle:fh, name:fn, inBatch:name});
+        else if (fh.kind === "file" && !isLunaSystemFile(fn)) b.files.push({handle:fh, name:fn, path:fn});
+        else if (fh.kind === "directory"){ for await (const [fn2, fh2] of fh.entries()) if (fh2.kind === "file" && !fn2.startsWith(".") && !isLunaSystemFile(fn2)) b.files.push({handle:fh2, name:fn2, path:fn + "/" + fn2, folder:fn}); }
+      }
+      batches.push(b);
+    }
+  }
+  // read titles of upload files
+  for (const f of formats){ try{ f.sheet = await readSheet(f.handle); f.title = f.sheet.title }catch(e){ f.err = e.message; f.title = "" } }
+  // pair them
+  const list = [];
+  const used = new Set();
+  for (const b of batches){
+    let f = formats.find(x => x.inBatch === b.name)
+         || formats.find(x => b.cid && x.cid === b.cid && !x.inBatch)
+         || formats.find(x => !used.has(x) && x.title && normTitle(x.title) === normTitle(b.title))
+         || formats.find(x => !used.has(x) && weekNum(x.title) != null && weekNum(x.title) === weekNum(b.title));
+    if (f) used.add(f);
+    const cid = (f && f.cid) || b.cid;
+    list.push({key: cid ? "c" + cid : "b" + b.name, cid, title: (f && f.title) || b.title, batch:b, format:f || null});
+  }
+  for (const f of formats) if (!used.has(f) && !f.inBatch) list.push({key:"c" + f.cid, cid:f.cid, title: f.title || ("Upload file " + f.cid), batch:null, format:f});
+  list.sort((a,b) => (weekNum(a.title) ?? 999) - (weekNum(b.title) ?? 999) || a.title.localeCompare(b.title));
+  // dedupe: if the same assignment was downloaded twice, keep the newest batch
+  return {list, notes};
+}
+async function showAssignments(){
+  show("assignScreen");
+  $("asTitle").textContent = curClass.name;
+  $("asSub").textContent = "Looking in “" + lunaDir.name + "”…";
+  $("assignList").innerHTML = "";
+  const {list, notes} = await scanLuna();
+  assignments = list;
+  const progress = await Promise.all(list.map(a => loadGradeFile(a).then(g => g ? Object.values(g.grades||{}).filter(x => x.score !== "" && x.score != null).length : 0).catch(() => 0)));
+  $("asSub").innerHTML = list.length ? `Choose an assignment (press its number).` : `No LUNA downloads found in “${esc(lunaDir.name)}” yet. Put the batch download folder and the upload file (…assignment_comment_format_….xlsx) there, then press Refresh.`;
+  $("assignList").innerHTML = notes.map(n => `<p class="hint" style="color:var(--flag)">${esc(n)}</p>`).join("") + list.map((a,i) => {
+    const nSub = a.batch ? new Set(a.batch.files.map(f => idFromName(f.name)).filter(Boolean)).size : 0;
+    const nRoster = a.format && a.format.sheet ? a.format.sheet.rows.length : 0;
+    const bits = [];
+    if (a.batch) bits.push(`${nSub} submitted` + (nRoster ? ` of ${nRoster}` : ""));
+    bits.push(`${progress[i]} graded`);
+    const warn = !a.batch ? `<span class="badge warn">files not downloaded</span>` : !a.format ? `<span class="badge warn">upload file not downloaded yet</span>` : (progress[i] && progress[i] >= nSub ? `<span class="badge ok">done</span>` : "");
+    return `<button class="choice" data-a="${i}"><span class="num">${i<9 ? i+1 : ""}</span><span class="grow"><div class="t">${esc(a.title)} ${warn}</div><div class="d">${esc(bits.join(" · "))}</div></span></button>`;
+  }).join("");
+}
+$("assignList").addEventListener("click", e => { const b = e.target.closest("[data-a]"); if (b) openAssignment(assignments[+b.dataset.a]) });
+$("asBack").addEventListener("click", () => { show("home"); renderHome() });
+$("asRefresh").addEventListener("click", showAssignments);
+$("asRepick").addEventListener("click", () => openClass(curClass, true));
+
+// LUNA's own spreadsheets (and this app's files) are never student submissions. Other Excel files are kept.
+function isLunaSystemFile(n){
+  return /(^|_)assignment_comment(_format)?_\d+(_GRADED)?\.xlsx$/i.test(n) || /(^|_)assignment_status_.*\.(xlsx|csv)$/i.test(n) || /^luna-grader_.*\.json$/i.test(n) || /^~\$/.test(n);
+}
+function idFromName(n){ const m = /^(\d{5,12})[_\s-]/.exec(n); return m ? m[1] : null }
+
+/* ================= Grade storage (JSON file in the LUNA folder + browser copy) ================= */
+// The grades file is named by LUNA's assignment number, which is the same whether or not the upload file is present yet.
+function gradeFileName(a){ return "luna-grader_" + (a.cid || a.title.replace(/[\\/:*?"<>|]/g,"_")) + ".json" }
+function legacyGradeFileNames(a){
+  const t = [a.title, a.batch && a.batch.title].filter(Boolean).map(x => "luna-grader_" + x.replace(/[\\/:*?"<>|]/g,"_") + ".json");
+  return [...new Set(t)].filter(n => n !== gradeFileName(a));
+}
+function workDir(a){ return a.batch ? a.batch.handle : lunaDir }   // grades + upload file live next to the students' work
+function lsKey(a){ return "lunaGrader.grades." + (curClass ? curClass.id : "x") + "." + a.key }
+async function loadGradeFile(a){
+  // Collect every place grades for this assignment may have been saved (including older naming), newest entry per student wins.
+  const sources = [];
+  const dirs = [...new Set([workDir(a), lunaDir])];        // older versions saved in the LUNA Assignments folder itself
+  for (const dir of dirs) for (const n of [gradeFileName(a), ...legacyGradeFileNames(a)]){
+    try{ const fh = await dir.getFileHandle(n); const d = safeJSON(await (await fh.getFile()).text()); if (d) sources.push(d) }catch(e){}
+  }
+  const lsKeys = [lsKey(a)]; if (a.batch) lsKeys.push("lunaGrader.grades." + (curClass ? curClass.id : "x") + ".b" + a.batch.name);
+  for (const k of lsKeys){ const d = safeJSON(localStorage.getItem(k)); if (d) sources.push(d) }
+  if (!sources.length) return null;
+  const g = {};
+  for (const d of sources) for (const [k,v] of Object.entries(d.grades || {})) if (!g[k] || (v.t||0) > (g[k].t||0)) g[k] = v;
+  return Object.assign({}, sources[0], {grades:g});
+}
+let writeTimer = null, writing = Promise.resolve();
+function persist(){
+  if (mode === "generic"){ try{ localStorage.setItem(genericKey, JSON.stringify(grades)) }catch(e){} return; }
+  const data = {app:"luna-grader", version:VERSION, class:curClass.name, assignment:A.title, uploadFile:A.batch && A.batch.inner ? A.batch.inner.name : (A.format ? A.format.name : null), updated:new Date().toISOString(), grades};
+  try{ localStorage.setItem(lsKey(A), JSON.stringify(data)) }catch(e){}
+  $("syncState").textContent = "Saving…";
+  clearTimeout(writeTimer);
+  writeTimer = setTimeout(() => {
+    writing = writing.then(async () => {
+      try{
+        const fh = await workDir(A).getFileHandle(gradeFileName(A), {create:true});
+        const w = await fh.createWritable(); await w.write(JSON.stringify(data, null, 1)); await w.close();
+        $("syncState").textContent = "Saved to folder";
+      }catch(e){ console.error(e); $("syncState").textContent = "Saved in browser only"; }
+    });
+  }, 500);
+}
+
+/* ================= Open an assignment ================= */
+async function openAssignment(a){
+  if (!a.batch){ flash("The student files for this assignment haven't been downloaded into the folder yet."); return; }
+  mode = "class"; A = a;
+  let roster = [], inner = null;
+  if (a.batch.inner){ try{ roster = (inner = a.innerSheet = await readSheet(a.batch.inner)).rows }catch(e){ console.error(e) } }
+  if (!roster.length && a.format && a.format.sheet) roster = a.format.sheet.rows;
+  inner = null;
+  const map = new Map();
+  const addStu = (id, name) => { if (!map.has(id)) map.set(id, {key:id, id, name:name||"", time:"", status:"", files:[], rows:[], pre:null}); return map.get(id) };
+  for (const r of roster){ const s = addStu(r.id, r.name); if (!s.time || r.time > s.time) s.time = r.time; if (r.status === "2" || !s.status) s.status = r.status; s.rows.push(r.rowNum); if ((r.score !== "" && r.score != null) || r.comment) s.pre = {score:r.score, comment:r.comment}; }
+  if (inner) for (const r of inner.rows){ const s = addStu(r.id, r.name); s.time = s.time || r.time; s.status = s.status || r.status; s.rows.push(r.rowNum); }
+  const unmatched = [];
+  for (const f of a.batch.files){
+    const id = idFromName(f.name) || (f.folder && idFromName(f.folder + "_"));
+    if (!id){ unmatched.push(f); continue; }
+    const s = addStu(id, ""); f.ext = extOf(f.name); f.short = f.name.replace(/^\d+[_\s-]+/, ""); s.files.push(f);
+  }
+  if (unmatched.length){ const s = addStu("(unmatched)", "Files without a student ID"); unmatched.forEach(f => { f.ext = extOf(f.name); f.short = f.name; s.files.push(f) }); }
+  for (const s of map.values()){ s.late = s.status === "2" || /late|遅/i.test(s.status); s.files.sort((x,y) => x.name.localeCompare(y.name, undefined, {numeric:true})) }
+  students = [...map.values()].sort((x,y) => x.id.localeCompare(y.id, undefined, {numeric:true}));
+  // grades
+  const saved = await loadGradeFile(a);
+  grades = (saved && saved.grades) || {};
+  for (const s of students) if (!grades[s.key] && s.pre) grades[s.key] = {score: s.pre.score === "" || s.pre.score == null ? "" : String(s.pre.score), comment: s.pre.comment || "", flag:false, t:0, fromLuna:true};
+  // UI
+  show("app");
+  $("crumb").textContent = curClass.name + "  ›  " + a.title;
+  $("saveUpload").classList.toggle("hidden", false);
+  $("exportCsv").classList.add("hidden"); $("exportXlsx").classList.add("hidden");
+  $("syncState").textContent = saved ? "Loaded saved grades" : "";
+  $("filter").value = "sub";
+  renderPanelConfig();
+  buildView();
+  const first = view.find(i => !isGraded(students[i]));
+  select(first != null ? first : (view[0] ?? 0));
+}
+$("backBtn").addEventListener("click", goBack);
+function goBack(){
+  if (mode === "generic"){ show("home"); renderHome(); return; }
+  showAssignments();
+}
+
+/* ================= Generic folder (any folder of files) ================= */
+async function openGeneric(){
+  if (window.showDirectoryPicker){
+    try{
+      const dir = await window.showDirectoryPicker({mode:"read"});
+      const out = []; await walk(dir, "", out); loadGeneric(dir.name, out); return;
+    }catch(e){ if (e.name === "AbortError") return; }
+  }
+  $("dirInput").click();
+}
+async function walk(dir, prefix, out){
+  for await (const [name, h] of dir.entries()){
+    if (name.startsWith(".") || isLunaSystemFile(name)) continue;
+    if (h.kind === "directory") await walk(h, prefix + name + "/", out);
+    else out.push({file: await h.getFile(), path: prefix + name});
+  }
+}
+$("dirInput").addEventListener("change", e => {
+  const list = [...e.target.files].filter(f => !f.name.startsWith(".") && !isLunaSystemFile(f.name));
+  if (!list.length) return;
+  const root = (list[0].webkitRelativePath || "").split("/")[0] || "folder";
+  loadGeneric(root, list.map(f => ({file:f, path:(f.webkitRelativePath||f.name).split("/").slice(1).join("/") || f.name})));
+  e.target.value = "";
+});
+function loadGeneric(rootName, list){
+  mode = "generic"; curClass = null; A = null;
+  const map = new Map();
+  for (const o of list){
+    const name = o.path.split("/").pop();
+    const parts = o.path.split("/");
+    let id = idFromName(name) || (parts.length > 1 ? parts[0] : null) || (/(\d{5,})/.exec(name) || [])[1] || name.replace(/\.[^.]+$/,"").split(/[_\s]/)[0];
+    if (!map.has(id)) map.set(id, {key:id, id, name:"", time:"", status:"", files:[], rows:[]});
+    map.get(id).files.push({file:o.file, name, path:o.path, ext:extOf(name), short:name.replace(/^\d+[_\s-]+/, "")});
+  }
+  students = [...map.values()].sort((x,y) => x.id.localeCompare(y.id, undefined, {numeric:true}));
+  genericKey = "lunaGrader.generic." + rootName;
+  grades = safeJSON(localStorage.getItem(genericKey)) || {};
+  show("app");
+  $("crumb").textContent = rootName;
+  $("saveUpload").classList.add("hidden");
+  $("exportCsv").classList.remove("hidden"); $("exportXlsx").classList.remove("hidden");
+  $("syncState").textContent = "";
+  $("filter").value = "all";
+  renderPanelConfig();
+  buildView(); select(view[0] ?? 0);
+}
+
+/* ================= Sidebar ================= */
+function isGraded(s){ const g = grades[s.key]; return !!g && g.score !== "" && g.score != null }
+function buildView(){
+  const q = $("search").value.trim().toLowerCase();
+  const fl = $("filter").value;
+  view = [];
+  students.forEach((s,i) => {
+    const g = grades[s.key] || {};
+    if (q && !(s.id + " " + s.name + " " + s.files.map(f=>f.name).join(" ")).toLowerCase().includes(q)) return;
+    const has = s.files.length > 0;
+    if (fl === "sub" && !has) return;
+    if (fl === "todo" && (!has || isGraded(s))) return;
+    if (fl === "done" && !isGraded(s)) return;
+    if (fl === "flag" && !g.flag) return;
+    if (fl === "late" && !s.late) return;
+    if (fl === "none" && has) return;
+    view.push(i);
+  });
+  renderList();
+}
+function renderList(){
+  $("list").innerHTML = view.map(i => {
+    const s = students[i], g = grades[s.key] || {};
+    const cls = ["stu", i===cur?"active":"", isGraded(s)?"graded":"", g.flag?"flagged":"", s.files.length?"":"none", s.late?"isLate":""].join(" ");
+    const sub = (s.name ? s.name + " · " : "") + (s.files.length ? s.files.length + (s.files.length===1?" file":" files") : "no submission");
+    return `<div class="${cls}" data-i="${i}"><span class="dot"></span><div class="who"><div class="id">${esc(s.id)}${s.late?'<span class="badge late">LATE</span>':""}</div><div class="sub">${esc(sub)}</div></div><span class="sc">${isGraded(s)?esc(g.score):""}</span></div>`;
+  }).join("") || `<div class="stu"><div class="sub">No students match.</div></div>`;
+  const pool = mode === "class" ? students.filter(s => s.files.length) : students;
+  $("progress").textContent = `${pool.filter(isGraded).length} / ${pool.length} graded`;
+  const a = $("list").querySelector(".stu.active"); if (a) a.scrollIntoView({block:"nearest"});
+}
+$("list").addEventListener("click", e => { const el = e.target.closest(".stu[data-i]"); if (el) select(+el.dataset.i) });
+$("search").addEventListener("input", buildView);
+$("filter").addEventListener("change", () => { buildView(); $("filter").blur() });
+
+/* ================= Selecting & grading ================= */
+function select(i, fileIdx=0){
+  if (!students.length){ $("stage").innerHTML = `<div class="msg">No students found.</div>`; return; }
+  cur = Math.max(0, Math.min(students.length-1, i));
+  const s = students[cur], g = grades[s.key] || {};
+  $("stuName").textContent = s.name || s.id;
+  const meta = [];
+  if (s.name) meta.push(esc(s.id));
+  meta.push(s.files.length ? s.files.length + (s.files.length===1 ? " file" : " files") : "No submission");
+  if (s.time) meta.push("Submitted " + esc(s.time));
+  if (g.fromLuna) meta.push('<span class="badge warn">score already in LUNA</span>');
+  $("stuMeta").innerHTML = meta.join(" · ");
+  $("stuHead").classList.toggle("isLate", !!s.late);
+  $("lateBanner").classList.toggle("hidden", !s.late);
+  if (s.late) $("lateBanner").innerHTML = `<span>⚠ LATE SUBMISSION</span><span class="when">submitted ${esc(s.time)} · LUNA status: late</span>`;
+  $("score").value = g.score ?? "";
+  $("comment").value = g.comment ?? "";
+  $("flagBtn").classList.toggle("on", !!g.flag);
+  $("saved").textContent = "";
+  updateCount();
+  showFile(fileIdx);
+  renderList();
+}
+function step(d){
+  const pos = view.indexOf(cur);
+  if (pos === -1){ if (view.length) select(view[0]); return; }
+  const np = pos + d;
+  if (np >= 0 && np < view.length) select(view[np]);
+  else if (np >= view.length) flash("That was the last student in this list");
+}
+function nextUngraded(){
+  const pool = students.map((s,i) => i).filter(i => (mode !== "class" || students[i].files.length) && !isGraded(students[i]));
+  if (!pool.length) return flash("Everyone who submitted is graded");
+  const after = pool.find(i => i > cur);
+  const target = after != null ? after : pool[0];
+  if (!view.includes(target)){ $("filter").value = "sub"; buildView(); }
+  select(target);
+}
+let savedTimer;
+function save(){
+  const s = students[cur]; if (!s) return;
+  const g = Object.assign({}, grades[s.key] || {});
+  g.score = $("score").value.trim();
+  g.comment = $("comment").value;
+  g.flag = $("flagBtn").classList.contains("on");
+  g.t = Date.now(); delete g.fromLuna;
+  if (!g.score && !g.comment && !g.flag) delete grades[s.key]; else grades[s.key] = g;
+  persist();
+  $("saved").textContent = "Saved";
+  clearTimeout(savedTimer); savedTimer = setTimeout(() => $("saved").textContent = "", 1200);
+  updateCount();
+  renderList();
+}
+function updateCount(){
+  const n = $("comment").value.length;
+  $("charCount").textContent = n > 1100 ? `${n} / 1300` : "";
+  $("charCount").style.color = n > 1300 ? "var(--late)" : "";
+}
+function setScore(v){
+  const max = parseFloat(cfg().max);
+  $("score").value = v; save();
+  if (!isNaN(max) && parseFloat(v) > max) flash(`Score is above the maximum (${cfg().max})`);
+}
+$("score").addEventListener("input", save);
+$("comment").addEventListener("input", save);
+$("score").addEventListener("keydown", e => { if (e.key === "Enter" && !e.metaKey && !e.ctrlKey){ e.preventDefault(); $("comment").focus() } });
+$("flagBtn").addEventListener("click", () => { $("flagBtn").classList.toggle("on"); save() });
+$("prevBtn").addEventListener("click", () => step(-1));
+$("nextBtn").addEventListener("click", () => step(1));
+function cfg(classId){
+  const id = classId !== undefined ? classId : (mode === "class" && curClass ? curClass.id : null);
+  const pc = id && settings.perClass && settings.perClass[id];
+  return pc || {max:settings.max, quick:settings.quick, bank:settings.bank, req:settings.req || {}};
+}
+function bankItems(){ return cfg().bank.split("\n").map(s=>s.trim()).filter(Boolean) }
+function quickItems(){ return cfg().quick.split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean) }
+function addBank(n){
+  const t = bankItems()[n]; if (!t) return;
+  const c = $("comment");
+  c.value = c.value.trim() ? c.value.replace(/\s*$/,"") + "\n" + t : t;
+  save();
+}
+function renderPanelConfig(){
+  const c = cfg();
+  $("maxLabel").textContent = c.max ? "/ " + c.max : "";
+  $("bankTitle").textContent = mode === "class" && curClass ? "Comment bank — " + curClass.name : "Comment bank";
+  $("quick").innerHTML = quickItems().map((q,i) => `<button data-q="${esc(q)}">${esc(q)}${i<9?`<kbd>${i+1}</kbd>`:""}</button>`).join("");
+  $("bank").innerHTML = bankItems().map((b,i) => `<button data-b="${i}">${i<9?`<kbd>⌥${i+1}</kbd>`:""}<span>${esc(b)}</span></button>`).join("") || `<span class="hint">Add comments in Settings.</span>`;
+}
+$("quick").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setScore(b.dataset.q) });
+$("bank").addEventListener("click", e => { const b = e.target.closest("button"); if (b) addBank(+b.dataset.b) });
+
+/* ================= Word formatting, read directly from the .docx file ================= */
+const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const fmtNum = (n, d=2) => (+n).toFixed(d).replace(/\.?0+$/, "");
+async function analyzeDocx(buf){
+  const zip = await JSZip.loadAsync(buf);
+  const read = async p => zip.file(p) ? new DOMParser().parseFromString(await zip.file(p).async("string"), "application/xml") : null;
+  const doc = await read("word/document.xml"); if (!doc) throw new Error("this file has no Word document inside");
+  const styles = await read("word/styles.xml"), theme = await read("word/theme/theme1.xml"), app = await read("docProps/app.xml");
+  const kids = (el, n) => el ? [...el.children].filter(c => c.localName === n) : [];
+  const kid = (el, n) => kids(el, n)[0] || null;
+  const at = (el, n) => el ? el.getAttributeNS(W_NS, n) : null;
+  // theme fonts (Word's "+Body" / "+Headings" fonts)
+  const tf = {};
+  if (theme) for (const kind of ["major","minor"]){
+    const f = theme.getElementsByTagNameNS("*", kind + "Font")[0]; if (!f) continue;
+    const c = n => [...f.children].find(x => x.localName === n);
+    const jp = [...f.children].find(x => x.localName === "font" && x.getAttribute("script") === "Jpan");
+    tf[kind + "L"] = (c("latin") && c("latin").getAttribute("typeface")) || "";
+    tf[kind + "E"] = (c("ea") && c("ea").getAttribute("typeface")) || (jp && jp.getAttribute("typeface")) || "";
+  }
+  const fromTheme = v => !v ? null : (tf[(v.startsWith("major") ? "major" : "minor") + (/EastAsia/.test(v) ? "E" : "L")] || null);
+  const rProps = rPr => { const o = {}; if (!rPr) return o;
+    const f = kid(rPr, "rFonts");
+    if (f){ const a = fromTheme(at(f,"asciiTheme")) || at(f,"ascii") || fromTheme(at(f,"hAnsiTheme")) || at(f,"hAnsi"); if (a) o.ascii = a;
+            const e = fromTheme(at(f,"eastAsiaTheme")) || at(f,"eastAsia"); if (e) o.ea = e; }
+    const sz = kid(rPr, "sz"); if (sz && at(sz,"val")) o.sz = +at(sz,"val") / 2;
+    return o; };
+  const pProps = pPr => { const o = {}; if (!pPr) return o;
+    const sp = kid(pPr, "spacing");
+    if (sp){ const l = at(sp,"line"); if (l != null && l !== ""){ o.line = +l; o.rule = at(sp,"lineRule") || "auto"; }
+             const b = at(sp,"before"), a = at(sp,"after"); if (b) o.before = +b; if (a) o.after = +a; }
+    const jc = kid(pPr, "jc"); if (jc) o.jc = at(jc,"val");
+    const ind = kid(pPr, "ind");
+    if (ind){ const fl = at(ind,"firstLine"), h = at(ind,"hanging"), flc = at(ind,"firstLineChars");
+      if (flc && +flc) o.ind = {chars: +flc/100}; else if (fl) o.ind = {tw: +fl}; else if (h) o.ind = {tw: -h}; }
+    return o; };
+  const smap = {}; let defPara = null; const defR = {}, defP = {};
+  if (styles){
+    const dd = styles.getElementsByTagNameNS(W_NS, "docDefaults")[0];
+    if (dd){ Object.assign(defR, rProps(kid(kid(dd,"rPrDefault"),"rPr"))); Object.assign(defP, pProps(kid(kid(dd,"pPrDefault"),"pPr"))); }
+    for (const st of styles.getElementsByTagNameNS(W_NS, "style")){
+      const id = at(st,"styleId"), b = kid(st,"basedOn");
+      smap[id] = {based: b ? at(b,"val") : null, r: rProps(kid(st,"rPr")), p: pProps(kid(st,"pPr"))};
+      if (at(st,"type") === "paragraph" && /^(1|true)$/.test(at(st,"default") || "")) defPara = id;
+    }
+  }
+  const chain = id => { const out = [], seen = new Set(); while (id && smap[id] && !seen.has(id)){ seen.add(id); out.unshift(smap[id]); id = smap[id].based } return out };
+  const T = () => new Map(); const add = (m,k,n) => m.set(k, (m.get(k)||0) + n);
+  const latin = T(), cjkF = T(), sizes = T(), lines = T(), align = T(), indent = T(), spacing = T();
+  let nLatin = 0, nCjk = 0, words = 0;
+  const body = doc.getElementsByTagNameNS(W_NS, "body")[0];
+  const CJK = /[　-ヿ㐀-鿿豈-﫿＀-￯]/;
+  for (const p of body.getElementsByTagNameNS(W_NS, "p")){
+    const pPr = kid(p, "pPr"), ps = pPr && kid(pPr, "pStyle");
+    const pch = chain((ps && at(ps,"val")) || defPara);
+    const P = Object.assign({}, defP, ...pch.map(s => s.p), pProps(pPr));
+    const Rb = Object.assign({}, defR, ...pch.map(s => s.r));
+    let n = 0, ptext = "";
+    for (const r of p.getElementsByTagNameNS(W_NS, "r")){
+      let a = r.parentNode, ok = true;
+      while (a && a !== p){ if (a.localName === "p" || a.localName === "del") { ok = false; break } a = a.parentNode }
+      if (!ok) continue;
+      const text = kids(r, "t").map(t => t.textContent).join(""); if (!text) continue;
+      ptext += text;
+      const rPr = kid(r, "rPr"), rs = rPr && kid(rPr, "rStyle");
+      const R = Object.assign({}, Rb, ...chain(rs && at(rs,"val")).map(s => s.r), rProps(rPr));
+      const size = R.sz || 10;
+      for (const ch of text){
+        if (/\s/.test(ch)) continue;
+        if (CJK.test(ch)){ add(cjkF, R.ea || R.ascii || "(default)", 1); nCjk++; }
+        else { add(latin, R.ascii || "Times New Roman", 1); nLatin++; }
+        add(sizes, size, 1); n++;
+      }
+    }
+    words += (ptext.match(/[A-Za-z0-9][A-Za-z0-9'’\-]*/g) || []).length;
+    if (!n) continue;
+    const rule = P.rule || "auto", ln = P.line ?? 240;
+    let lab;
+    if (rule === "auto"){ const m = ln / 240; lab = Math.abs(m-1) < .01 ? "single" : Math.abs(m-1.5) < .01 ? "1.5 lines" : Math.abs(m-2) < .01 ? "double" : "multiple " + fmtNum(m); }
+    else lab = (rule === "exact" ? "exactly " : "at least ") + fmtNum(ln/20, 1) + " pt";
+    add(lines, lab, n);
+    add(align, ({both:"justified", distribute:"distributed", center:"centred", right:"right", end:"right", left:"left", start:"left"})[P.jc || "left"] || P.jc, n);
+    add(indent, P.ind ? (P.ind.chars ? fmtNum(P.ind.chars) + " character" + (P.ind.chars === 1 ? "" : "s") : (P.ind.tw < 0 ? "hanging " : "") + fmtNum(Math.abs(P.ind.tw)/567) + " cm") : "none", n);
+    add(spacing, `before ${fmtNum((P.before||0)/20,1)} pt, after ${fmtNum((P.after||0)/20,1)} pt`, n);
+  }
+  const share = (m, tot) => [...m.entries()].sort((a,b) => b[1]-a[1]).map(([k,v]) => ({k, v, pct: tot ? v/tot : 0}));
+  const total = nLatin + nCjk;
+  // page setup (last section = main body)
+  const sect = [...body.children].filter(c => c.localName === "sectPr").pop() || body.getElementsByTagNameNS(W_NS, "sectPr")[0];
+  let page = null, margins = null, grid = null;
+  if (sect){
+    const sz = kid(sect, "pgSz"), mg = kid(sect, "pgMar"), dg = kid(sect, "docGrid");
+    if (sz){
+      const w = +at(sz,"w"), h = +at(sz,"h");
+      const known = {A4:[11906,16838], Letter:[12240,15840], "B5 (JIS)":[10318,14570], A5:[8391,11906], Legal:[12240,20160], A3:[16838,23811]};
+      const name = Object.keys(known).find(k => { const [a,b] = known[k]; return (Math.abs(a-w) < 80 && Math.abs(b-h) < 80) || (Math.abs(a-h) < 80 && Math.abs(b-w) < 80) });
+      page = {name: name || "custom", w: w/567, h: h/567, landscape: w > h};
+      if (mg) margins = {t: +at(mg,"top")/567, r: +at(mg,"right")/567, b: +at(mg,"bottom")/567, l: +at(mg,"left")/567};
+      if (dg && /lines/i.test(at(dg,"type") || "") && +at(dg,"linePitch") && margins) grid = {lines: Math.floor((h - (+at(mg,"top")) - (+at(mg,"bottom"))) / +at(dg,"linePitch"))};
+    }
+  }
+  // page numbers in headers/footers
+  let pageNumbers = false;
+  for (const p of Object.keys(zip.files).filter(p => /^word\/(header|footer)\d*\.xml$/.test(p))){
+    const x = await zip.file(p).async("string");
+    if (/instrText[^>]*>\s*PAGE\b/.test(x) || /w:instr="\s*PAGE\b/.test(x)) pageNumbers = true;
+  }
+  const appVal = n => { const e = app && app.getElementsByTagNameNS("*", n)[0]; return e ? e.textContent : null };
+  return {
+    latin: share(latin, nLatin), cjk: share(cjkF, nCjk), sizes: share(sizes, total),
+    lines: share(lines, total), align: share(align, total), indent: share(indent, total), spacing: share(spacing, total),
+    nLatin, nCjk, words, page, margins, grid, pageNumbers,
+    pages: appVal("Pages"), appWords: appVal("Words"), application: appVal("Application")
+  };
+}
+function fontInstalled(name){
+  if (!name || name === "(default)") return true;
+  const c = fontInstalled.c || (fontInstalled.c = document.createElement("canvas").getContext("2d"));
+  const s = "mmmmmmmmmmlliWWQ@#日本語のテスト漢字";
+  return ["monospace","serif","sans-serif"].some(base => { c.font = `72px ${base}`; const w0 = c.measureText(s).width; c.font = `72px "${name.replace(/"/g,"")}", ${base}`; return Math.abs(c.measureText(s).width - w0) > 0.5 });
+}
+function parseLength(s){   // "2.54", "2.54 cm", "1 in", "25.4mm" -> cm
+  const m = /^\s*([\d.]+)\s*(cm|mm|in|inch|inches|")?\s*$/i.exec(String(s||"")); if (!m) return null;
+  const v = +m[1], u = (m[2]||"cm").toLowerCase();
+  return u === "mm" ? v/10 : /^(in|inch|inches|")$/.test(u) ? v*2.54 : v;
+}
+function checkReq(a, req){
+  const out = {};
+  if (!req) return out;
+  const top = arr => arr[0];
+  if (req.font && a.latin.length){ const t = top(a.latin); out.font = t.k.toLowerCase().includes(req.font.trim().toLowerCase()) && t.pct >= 0.9; }
+  if (req.size && a.sizes.length){ out.size = +top(a.sizes).k === +req.size; }
+  if (req.line && a.lines.length){
+    const want = /double/i.test(req.line) ? 2 : /single/i.test(req.line) ? 1 : parseFloat(req.line);
+    const lab = top(a.lines).k; const have = lab === "single" ? 1 : lab === "double" ? 2 : lab === "1.5 lines" ? 1.5 : /^multiple /.test(lab) ? parseFloat(lab.slice(9)) : NaN;
+    out.line = Math.abs(have - want) < 0.01;
+  }
+  if (req.margins && a.margins){ const w = parseLength(req.margins); if (w != null) out.margins = ["t","r","b","l"].every(k => Math.abs(a.margins[k] - w) < 0.06); }
+  if (req.paper && a.page) out.paper = a.page.name.toLowerCase().startsWith(req.paper.trim().toLowerCase());
+  if (req.words){ const m = /^\s*(\d+)?\s*[-–~〜]?\s*(\d+)?\s*$/.exec(req.words); if (m && (m[1] || m[2])){ const n = a.words; out.words = (!m[1] || n >= +m[1]) && (!m[2] || n <= +m[2]); } }
+  return out;
+}
+
+/* ================= File viewer ================= */
+const urls = new Map();
+async function fileOf(f){ if (!f.file) f.file = await f.handle.getFile(); return f.file }
+async function urlFor(f){ if (!urls.has(f)){ urls.set(f, URL.createObjectURL(await fileOf(f))); if (urls.size > 60){ const [k,v] = urls.entries().next().value; URL.revokeObjectURL(v); urls.delete(k) } } return urls.get(f) }
+function showFile(idx){
+  const s = students[cur];
+  if (!s.files.length){
+    $("filebar").innerHTML = "";
+    $("stage").innerHTML = `<div class="msg">No file was submitted${s.name ? " by " + esc(s.name) : ""}.<br><span class="hint">You can still give a score (for example 0) and a comment.</span></div>`;
+    return;
+  }
+  curFile = Math.max(0, Math.min(s.files.length-1, idx));
+  imgState = {actual:false, rot:0};
+  $("filebar").innerHTML = s.files.map((f,i) => `<span class="ftab ${i===curFile?"active":""}" data-f="${i}" title="${esc(f.path)}">${esc(f.short || f.name)}</span>`).join("")
+    + (s.files.length>1 ? `<span class="hint">← → to switch files</span>` : "");
+  render(s.files[curFile]);
+}
+$("filebar").addEventListener("click", e => { const t = e.target.closest(".ftab"); if (t) showFile(+t.dataset.f) });
+const IMG = ["jpg","jpeg","png","gif","webp","bmp","svg","avif"];
+const AUD = ["mp3","m4a","wav","aac","ogg","oga","flac","opus","weba"];
+const VID = ["mp4","m4v","mov","webm","ogv"];
+const TXT = ["txt","md","csv","tsv","json","html","htm","py","r","js","tex"];
+async function render(f){
+  const st = $("stage");
+  const token = Symbol(); render.token = token;
+  const stale = () => render.token !== token;
+  const e = f.ext;
+  try{
+    if (IMG.includes(e)){
+      const u = await urlFor(f); if (stale()) return;
+      st.innerHTML = `<div class="center"><img id="theImg" src="${u}" alt=""></div>`;
+    } else if (e === "pdf"){
+      const u = await urlFor(f); if (stale()) return;
+      st.innerHTML = `<iframe src="${u}" title="PDF"></iframe>`;
+      setTimeout(() => window.focus(), 400);
+    } else if (AUD.includes(e)){
+      const u = await urlFor(f); if (stale()) return;
+      st.innerHTML = `<div class="center" style="flex-direction:column;align-items:center;gap:12px"><div class="msg" style="margin-top:20vh">${esc(f.name)}</div><audio id="media" controls src="${u}" style="width:min(600px,90%)"></audio></div>`;
+    } else if (VID.includes(e)){
+      const u = await urlFor(f); if (stale()) return;
+      st.innerHTML = `<div class="center"><video id="media" controls src="${u}"></video></div>`;
+    } else if (e === "docx"){
+      st.innerHTML = `<div class="fmtwrap"><div class="fmtbar" id="fmtBar">Reading formatting…</div><div class="fmtdetail ${showFmtDetail ? "" : "hidden"}" id="fmtDetail"></div></div><div class="docxhost" id="docxHost"><div class="msg">Opening Word file…</div></div>`;
+      const buf = await (await fileOf(f)).arrayBuffer(); if (stale()) return;
+      analyzeDocx(buf.slice(0)).then(a => { if (!stale()) renderFmt(a) }).catch(err => { if (!stale()) $("fmtBar").textContent = "Could not read this file's formatting (" + err.message + ")." });
+      const host = $("docxHost");
+      try{
+        host.innerHTML = "";
+        await docx.renderAsync(buf, host, host, {className:"docx", inWrapper:true, ignoreWidth:false, ignoreHeight:false, ignoreFonts:false, breakPages:true,
+          ignoreLastRenderedPageBreak:false, experimental:true, renderHeaders:true, renderFooters:true, renderFootnotes:true, renderEndnotes:true,
+          renderChanges:true, renderComments:false, useBase64URL:true});
+        if (stale()) return;
+        fitDocx();
+      }catch(err){ console.error(err); if (!stale()) host.innerHTML = `<div class="msg">The page view could not be drawn for this file. The formatting summary above is still read from the file itself.<br><button onclick="openInWord()">Open in Word (W)</button></div>`; }
+    } else if (["xlsx","xls","ods"].includes(e)){
+      const wb = XLSX.read(await (await fileOf(f)).arrayBuffer()); if (stale()) return;
+      st.innerHTML = `<div class="center" style="flex-direction:column">` + wb.SheetNames.map(n => `<h4>${esc(n)}</h4>` + XLSX.utils.sheet_to_html(wb.Sheets[n])).join("") + `</div>`;
+    } else if (TXT.includes(e)){
+      const t = await (await fileOf(f)).text(); if (stale()) return;
+      st.innerHTML = `<div class="center"><pre>${esc(t)}</pre></div>`;
+    } else if (e === "heic" || e === "heif"){
+      st.innerHTML = `<div class="msg">Converting iPhone photo…</div>`;
+      const u = await heicUrl(f); if (stale()) return;
+      st.innerHTML = `<div class="center"><img id="theImg" src="${u}" alt=""></div>`;
+    } else {
+      st.innerHTML = cantShow(f, (e==="doc"||e==="pptx"||e==="ppt") ? "This file type can't be previewed here yet." : "No preview for this file type.");
+    }
+  }catch(err){ console.error(err); if (!stale()) st.innerHTML = cantShow(f, "This file could not be read" + (/NotFound/.test(err.name) ? " (was it moved or deleted?)" : "") + "."); }
+}
+function cantShow(f, why){
+  return `<div class="msg">${esc(why)}<br><b>${esc(f.name)}</b><br><button onclick="openCurrent()">Open in a new tab (O)</button> <button onclick="downloadCurrent()">Download (D)</button></div>`;
+}
+async function openCurrent(){ const f = students[cur].files[curFile]; if (!f) return; window.open(/^hei[cf]$/.test(f.ext) && heicCache.has(f) ? heicCache.get(f) : await urlFor(f), "_blank") }
+/* --- HEIC (iPhone photos): decoded with libheif, loaded the first time it's needed --- */
+const heicCache = new Map();
+function loadHeic(){
+  if (window.HeicTo) return;
+  const src = $("heicLib"); const s = document.createElement("script"); s.textContent = src.textContent; document.head.appendChild(s); src.textContent = "";
+}
+async function heicUrl(f){
+  if (heicCache.has(f)) return heicCache.get(f);
+  loadHeic();
+  const blob = await HeicTo({blob: await fileOf(f), type:"image/jpeg", quality:0.92});
+  const u = URL.createObjectURL(blob); heicCache.set(f, u); return u;
+}
+/* --- Word --- */
+let showFmtDetail = false, docxFit = true;
+function fitDocx(){
+  const host = $("docxHost"); if (!host) return;
+  const wrap = host.querySelector(".docx-wrapper"), sec = host.querySelector("section.docx"); if (!wrap || !sec) return;
+  wrap.style.zoom = 1;
+  const avail = $("stage").clientWidth - 40, w = sec.offsetWidth;
+  wrap.style.zoom = docxFit && w > avail ? (avail / w).toFixed(3) : 1;
+}
+window.addEventListener("resize", () => fitDocx());
+function chip(text, state){ return `<span class="chip ${state === true ? "ok" : state === false ? "bad" : state || ""}">${state === true ? "✓ " : state === false ? "✗ " : ""}${text}</span>` }
+function pct(x){ return Math.round(x*100) + "%" }
+function renderFmt(a){
+  const req = cfg().req || {}, ok = checkReq(a, req);
+  const cm = v => fmtNum(v, 2) + " cm";
+  const m = a.margins;
+  const sameM = m && ["r","b","l"].every(k => Math.abs(m[k]-m.t) < 0.01);
+  const mText = !m ? "margins ?" : sameM ? `margins ${cm(m.t)}${Math.abs(m.t-2.54) < 0.01 ? " (1 in)" : ""} all round` : `margins T ${cm(m.t)} · R ${cm(m.r)} · B ${cm(m.b)} · L ${cm(m.l)}`;
+  const main = a.latin[0], mainSize = a.sizes[0], mainLine = a.lines[0];
+  const missing = [...a.latin, ...a.cjk].filter(x => x.pct >= 0.02 && !fontInstalled(x.k)).map(x => x.k);
+  const bits = [];
+  bits.push(chip(a.page ? `${esc(a.page.name)}${a.page.landscape ? " landscape" : ""} (${fmtNum(a.page.w,1)} × ${fmtNum(a.page.h,1)} cm)` : "paper ?", ok.paper));
+  bits.push(chip(mText, ok.margins));
+  if (main) bits.push(chip(`<b>${esc(main.k)}</b>` + (a.latin.length > 1 ? ` ${pct(main.pct)}` : ""), ok.font));
+  if (a.cjk[0] && a.nCjk > 20) bits.push(chip(`Japanese: <b>${esc(a.cjk[0].k)}</b>` + (a.cjk.length > 1 ? ` ${pct(a.cjk[0].pct)}` : "")));
+  if (mainSize) bits.push(chip(`<b>${fmtNum(mainSize.k,1)} pt</b>` + (a.sizes.length > 1 ? ` ${pct(mainSize.pct)}` : ""), ok.size));
+  if (mainLine) bits.push(chip(`spacing <b>${esc(mainLine.k)}</b>` + (a.lines.length > 1 ? ` ${pct(mainLine.pct)}` : ""), ok.line));
+  if (a.align[0]) bits.push(chip(esc(a.align[0].k)));
+  bits.push(chip(`${a.words.toLocaleString()} words` + (a.nCjk > 50 ? ` · ${a.nCjk.toLocaleString()} Japanese characters` : ""), ok.words));
+  if (a.pages && +a.pages > 0 && a.appWords && +a.appWords > 0) bits.push(chip(`${a.pages} page${a.pages === "1" ? "" : "s"} in Word`));
+  if (missing.length) bits.push(chip(`⚠ not on this Mac: ${esc(missing.join(", "))} (preview substitutes it)`, "warn"));
+  bits.push(`<button class="link" onclick="toggleFmtDetail()" style="font-size:12px">${showFmtDetail ? "less" : "details"} (I)</button>`);
+  bits.push(`<button class="link" onclick="openInWord()" style="font-size:12px">open in Word (W)</button>`);
+  $("fmtBar").innerHTML = bits.join("");
+  const list = arr => arr.length ? arr.map(x => `${esc(String(x.k))}${arr.length > 1 ? ` <span class="hint">${pct(x.pct)}</span>` : ""}`).join(" · ") : "—";
+  const reqLine = Object.keys(req).length ? Object.entries(req).map(([k,v]) => `${k}: ${esc(v)}${ok[k] === true ? " ✓" : ok[k] === false ? " ✗" : ""}`).join(" · ") : `<span class="hint">none set for this class (Settings)</span>`;
+  $("fmtDetail").innerHTML = `<table>
+    <tr><td>Fonts (English)</td><td>${list(a.latin.map(x => Object.assign({}, x, {k: x.k + (fontInstalled(x.k) ? "" : " ⚠")})))}</td></tr>
+    ${a.cjk.length ? `<tr><td>Fonts (Japanese)</td><td>${list(a.cjk.map(x => Object.assign({}, x, {k: x.k + (fontInstalled(x.k) ? "" : " ⚠")})))}</td></tr>` : ""}
+    <tr><td>Font sizes</td><td>${list(a.sizes.map(x => Object.assign({}, x, {k: fmtNum(x.k,1) + " pt"})))}</td></tr>
+    <tr><td>Line spacing</td><td>${list(a.lines)}</td></tr>
+    <tr><td>Paragraph spacing</td><td>${list(a.spacing)}</td></tr>
+    <tr><td>First-line indent</td><td>${list(a.indent)}</td></tr>
+    <tr><td>Alignment</td><td>${list(a.align)}</td></tr>
+    <tr><td>Paper</td><td>${a.page ? `${esc(a.page.name)} (${fmtNum(a.page.w,2)} × ${fmtNum(a.page.h,2)} cm)${a.page.landscape ? ", landscape" : ""}` : "—"}</td></tr>
+    <tr><td>Margins</td><td>${m ? `top ${cm(m.t)} · right ${cm(m.r)} · bottom ${cm(m.b)} · left ${cm(m.l)}` : "—"}</td></tr>
+    ${a.grid ? `<tr><td>Japanese grid</td><td>${a.grid.lines} lines per page</td></tr>` : ""}
+    <tr><td>Page numbers</td><td>${a.pageNumbers ? "yes" : "no"}</td></tr>
+    <tr><td>Length</td><td>${a.words.toLocaleString()} words counted${a.appWords && +a.appWords > 0 ? ` · ${esc(a.appWords)} words and ${esc(a.pages || "?")} pages when last saved${a.application ? " in " + esc(a.application) : ""}` : ""}</td></tr>
+    <tr><td>Requirements</td><td>${reqLine}</td></tr>
+  </table><div class="hint" style="margin-top:6px">Read directly from the Word file, so these are exact even where the page view differs from Word. ⚠ = font not installed on this Mac.</div>`;
+}
+function toggleFmtDetail(){ showFmtDetail = !showFmtDetail; const d = $("fmtDetail"); if (d) d.classList.toggle("hidden", !showFmtDetail); const b = [...document.querySelectorAll("#fmtBar .link")][0]; if (b) b.textContent = (showFmtDetail ? "less" : "details") + " (I)" }
+async function openInWord(){
+  const f = students[cur] && students[cur].files[curFile]; if (!f || !/^(docx?|rtf|odt)$/.test(f.ext)) return;
+  await downloadCurrent();
+  if (!localStorage.getItem("lunaGrader.wordTip")){
+    localStorage.setItem("lunaGrader.wordTip", "1");
+    alert("A copy of this file is being downloaded so Word can open it.\n\nOne-time setup so it opens in Word automatically from now on:\n1. Click the download icon at the top right of Chrome.\n2. Click the “…” next to this file and choose “Always open files of this type”.\n\nAfter that, pressing W opens the student's file straight in Word. (The copies go to your Downloads folder; the student's original is not changed.)");
+  }
+}
+async function downloadCurrent(){ const f = students[cur].files[curFile]; if (!f) return; const a = document.createElement("a"); a.href = await urlFor(f); a.download = f.name; a.click() }
+function applyImg(){
+  const img = $("theImg"); if (!img) return;
+  img.classList.toggle("actual", imgState.actual);
+  img.style.transform = imgState.rot ? `rotate(${imgState.rot}deg)` : "";
+  img.style.margin = (imgState.rot % 180) ? "15% 0" : "";
+}
+
+/* ================= LUNA upload file ================= */
+// Fills Score + Feedback Comments into a copy of LUNA's own upload file, leaving everything else byte-for-byte as LUNA made it.
+const COLL = new Intl.Collator();
+function colIdx(ref){ const m = /^([A-Z]+)/.exec(ref); let n = 0; for (const ch of m[1]) n = n*26 + ch.charCodeAt(0) - 64; return n }
+function setCell(doc, NS, rowNum, colLetter, value, kind){
+  const sd = doc.getElementsByTagNameNS(NS, "sheetData")[0];
+  let row = [...sd.getElementsByTagNameNS(NS, "row")].find(r => r.getAttribute("r") === String(rowNum));
+  if (!row){
+    row = doc.createElementNS(NS, "row"); row.setAttribute("r", rowNum);
+    const after = [...sd.getElementsByTagNameNS(NS, "row")].find(r => +r.getAttribute("r") > rowNum);
+    sd.insertBefore(row, after || null);
+  }
+  const ref = colLetter + rowNum;
+  let c = [...row.getElementsByTagNameNS(NS, "c")].find(x => x.getAttribute("r") === ref);
+  if (!c){
+    c = doc.createElementNS(NS, "c"); c.setAttribute("r", ref);
+    const after = [...row.getElementsByTagNameNS(NS, "c")].find(x => colIdx(x.getAttribute("r")) > colIdx(ref));
+    row.insertBefore(c, after || null);
+  }
+  while (c.firstChild) c.removeChild(c.firstChild);
+  c.removeAttribute("t");
+  if (value === "" || value == null){ return; }
+  if (kind === "n"){ const v = doc.createElementNS(NS, "v"); v.textContent = String(value); c.appendChild(v); }
+  else if (kind === "ss"){ c.setAttribute("t", "s"); const v = doc.createElementNS(NS, "v"); v.textContent = String(value); c.appendChild(v); }
+  else {
+    c.setAttribute("t", "inlineStr");
+    const is = doc.createElementNS(NS, "is"), t = doc.createElementNS(NS, "t");
+    t.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
+    t.textContent = value; is.appendChild(t); c.appendChild(is);
+  }
+}
+async function buildUpload(){
+  // LUNA only imports its separate upload file (…assignment_comment_format_<id>.xlsx, one row per student).
+  const src = A.format.handle, sheet = A.format.sheet;
+  const useInner = false;
+  const scoreCol = sheet.cols.score, commentCol = sheet.cols.comment;
+  if (scoreCol < 0 || commentCol < 0) throw new Error("Could not find the Score / Feedback Comments columns in " + src.name);
+  const zip = await JSZip.loadAsync(await (await src.getFile()).arrayBuffer());
+  const path = Object.keys(zip.files).filter(p => /^xl\/worksheets\/sheet\d+\.xml$/.test(p)).sort()[0];
+  const doc = new DOMParser().parseFromString(await zip.file(path).async("string"), "application/xml");
+  const NS = doc.documentElement.namespaceURI;
+  // shared strings table
+  const ssPath = "xl/sharedStrings.xml";
+  const ssDoc = zip.file(ssPath) ? new DOMParser().parseFromString(await zip.file(ssPath).async("string"), "application/xml") : null;
+  const ssRoot = ssDoc && ssDoc.documentElement, SSNS = ssRoot && ssRoot.namespaceURI;
+  const ssIndex = new Map(); let added = 0;
+  if (ssDoc) [...ssRoot.getElementsByTagNameNS(SSNS, "si")].forEach((si, i) => { if (!ssIndex.has(si.textContent)) ssIndex.set(si.textContent, i) });
+  const sharedIdx = text => {
+    added++;
+    if (ssIndex.has(text)) return ssIndex.get(text);
+    const si = ssDoc.createElementNS(SSNS, "si"), t = ssDoc.createElementNS(SSNS, "t");
+    if (/^\s|\s$|\n/.test(text)) t.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
+    t.textContent = text; si.appendChild(t); ssRoot.appendChild(si);
+    const i = ssRoot.getElementsByTagNameNS(SSNS, "si").length - 1; ssIndex.set(text, i); return i;
+  };
+  const S = XLSX.utils.encode_col(scoreCol), C = XLSX.utils.encode_col(commentCol);
+  const done = new Set(); const problems = [];
+  const byId = new Map(students.map(s => [s.id, s]));
+  for (const r of sheet.rows){
+    const s = byId.get(r.id); const g = s && grades[s.key];
+    if (!g) continue;
+    const sc = String(g.score ?? "").trim();
+    let num = sc === "" ? "" : Number(sc);
+    if (sc !== "" && (isNaN(num) || num < 0)){ problems.push(`${r.id}: score “${sc}” is not a number of 0 or more (left blank)`); num = ""; }
+    let cm = g.comment || "";
+    if (cm.length > 1300){ problems.push(`${r.id}: comment is longer than 1300 characters (it was cut)`); cm = cm.slice(0,1300); }
+    if (num !== "") setCell(doc, NS, r.rowNum, S, num, "n");   // empty values: leave LUNA's cell exactly as it was
+    if (cm && ssDoc) setCell(doc, NS, r.rowNum, C, sharedIdx(cm), "ss");
+    else if (cm) setCell(doc, NS, r.rowNum, C, cm, "s");
+    if (num !== "" || cm) done.add(r.id);
+  }
+  if (ssDoc && added){
+    ssRoot.setAttribute("uniqueCount", ssRoot.getElementsByTagNameNS(SSNS, "si").length);
+    ssRoot.setAttribute("count", (+ssRoot.getAttribute("count") || 0) + added);
+    let ss = new XMLSerializer().serializeToString(ssDoc);
+    if (!ss.startsWith("<?xml")) ss = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + ss;
+    zip.file(ssPath, ss, {createFolders:false});
+  }
+  let out = new XMLSerializer().serializeToString(doc);
+  if (!out.startsWith("<?xml")) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + out;
+  zip.file(path, out, {createFolders:false});
+  const blob = await zip.generateAsync({type:"blob", compression:"DEFLATE", mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  return {blob, n: done.size, problems, useInner, srcName: src.name};
+}
+$("saveUpload").addEventListener("click", async () => {
+  if (mode !== "class" || !A) return;
+  const left = students.filter(s => s.files.length && !isGraded(s)).length;
+  if (left && !confirm(`${left} student(s) who submitted have no score yet. Save the upload file anyway?`)) return;
+  if (!A.format){
+    outer: for (const dir of [workDir(A), lunaDir]){
+      for await (const [name, h] of dir.entries()){
+        const m = /assignment_comment_format_(\d+)\.xlsx$/i.exec(name);
+        if (h.kind === "file" && m && (!A.cid || m[1] === A.cid)){ try{ A.format = {cid:m[1], handle:h, name, sheet: await readSheet(h)} }catch(e){} break outer; }
+      }
+    }
+  }
+  if (!A.format){
+    alert(`LUNA's upload file for this assignment isn't in the folder yet.\n\nIn LUNA, download the feedback-comment upload file (…assignment_comment_format_${A.cid || "…"}.xlsx) and put it in this assignment's download folder:\n   ${workDir(A).name}\n\nThen press “Save LUNA upload file” again. Your grades are safe in the meantime.`);
+    return;
+  }
+  try{
+    const {blob, n, problems, useInner, srcName} = await buildUpload();
+    const outName = srcName.replace(/\.xlsx$/i, "") + "_GRADED.xlsx";
+    let where = "";
+    try{
+      const dir = workDir(A);
+      const fh = await dir.getFileHandle(outName, {create:true});
+      const w = await fh.createWritable(); await w.write(blob); await w.close();
+      where = `Saved in this assignment's download folder (with the students' files):\n   ${dir.name}`;
+    }catch(e){
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = outName; a.click();
+      where = `Could not write into the folder, so “${outName}” was downloaded instead.`;
+    }
+    $("syncState").textContent = "Upload file saved " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    alert(`${where}\n\n➜ Upload THIS file to LUNA:\n   ${outName}\n\n${n} student(s) have a score or comment in it. LUNA's original spreadsheet is left unchanged on purpose.` +
+      
+      (problems.length ? `\n\nPlease check:\n• ` + problems.join("\n• ") : ""));
+  }catch(e){ console.error(e); alert("Could not make the upload file: " + e.message); }
+});
+
+/* ================= Generic exports ================= */
+function rows(){
+  const head = ["Student ID", "Score", "Comment", "Files"];
+  return [head, ...students.map(s => { const g = grades[s.key] || {}; const sc = g.score ?? ""; return [s.id, sc !== "" && !isNaN(+sc) ? +sc : sc, g.comment ?? "", s.files.map(f=>f.path).join("; ")] })];
+}
+function dl(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000) }
+$("exportCsv").addEventListener("click", () => {
+  const csv = rows().map(r => r.map(v => { v = String(v ?? ""); return /[",\n\r]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v }).join(",")).join("\r\n");
+  dl(new Blob(["﻿" + csv], {type:"text/csv;charset=utf-8"}), `grades_${stamp()}.csv`);
+});
+$("exportXlsx").addEventListener("click", () => {
+  const ws = XLSX.utils.aoa_to_sheet(rows()); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Grades");
+  XLSX.writeFile(wb, `grades_${stamp()}.xlsx`);
+});
+
+/* ================= Settings & help ================= */
+let draftClasses = [];
+function openSettings(){
+  draftClasses = settings.classes.map(c => Object.assign({}, c));
+  drafts = {"": {max:settings.max, quick:settings.quick, bank:settings.bank, req:settings.req || {}}};
+  for (const c of settings.classes) drafts[c.id] = Object.assign({}, (settings.perClass||{})[c.id] || drafts[""]);
+  renderScope(mode === "class" && curClass ? curClass.id : (settings.classes[0] ? settings.classes[0].id : ""));
+  renderClassEdit();
+  $("settingsModal").classList.add("open");
+}
+let drafts = {}, scope = "";
+const REQ = {font:"reqFont", size:"reqSize", line:"reqLine", margins:"reqMargins", paper:"reqPaper", words:"reqWords"};
+function keepScopeFields(){
+  const req = {}; for (const [k,id] of Object.entries(REQ)){ const v = $(id).value.trim(); if (v) req[k] = v; }
+  drafts[scope] = {max:$("setMax").value.trim(), quick:$("setQuick").value, bank:$("setBank").value, req};
+}
+function renderScope(id){
+  scope = id;
+  $("setScope").innerHTML = draftClasses.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("") + `<option value="">Default (classes without their own)</option>`;
+  $("setScope").value = id;
+  const d = drafts[id] || drafts[""];
+  $("setMax").value = d.max; $("setQuick").value = d.quick; $("setBank").value = d.bank;
+  for (const [k,id] of Object.entries(REQ)) $(id).value = (d.req || {})[k] || "";
+}
+$("setScope").addEventListener("change", () => { keepScopeFields(); renderScope($("setScope").value) });
+$("editBank").addEventListener("click", () => { openSettings(); setTimeout(() => $("setBank").focus(), 50) });
+async function renderClassEdit(){
+  const hs = await Promise.all(draftClasses.map(c => c.id ? idb.get("dir:" + c.id).catch(() => null) : null));
+  $("classEdit").innerHTML = draftClasses.map((c,i) => `<div class="classrow"><input data-ci="${i}" value="${esc(c.name)}"><button data-pick="${i}">Choose folder…</button><button data-del="${i}" title="Remove">✕</button><div class="d">${hs[i] ? "Folder: " + esc(hs[i].name) : "No folder yet"}</div></div>`).join("");
+}
+$("classEdit").addEventListener("input", e => { const i = e.target.dataset.ci; if (i != null){ draftClasses[+i].name = e.target.value; keepScopeFields(); renderScope(scope) } });
+$("classEdit").addEventListener("click", async e => {
+  const p = e.target.dataset.pick, d = e.target.dataset.del;
+  if (p != null){ try{ await pickClassFolder(draftClasses[+p]); renderClassEdit() }catch(err){} }
+  if (d != null && confirm(`Remove “${draftClasses[+d].name}” from the list? (Its files are not touched.)`)){ draftClasses.splice(+d, 1); renderClassEdit() }
+});
+$("addClass").addEventListener("click", () => { const id = "c" + Date.now().toString(36); keepScopeFields(); drafts[id] = Object.assign({}, drafts[""]); draftClasses.push({id, name:"New class"}); renderClassEdit(); renderScope(scope) });
+function closeModals(){ document.querySelectorAll(".modal").forEach(m => m.classList.remove("open")) }
+$("settingsBtn").addEventListener("click", openSettings);
+$("settingsCancel").addEventListener("click", closeModals);
+$("settingsSave").addEventListener("click", () => {
+  keepScopeFields();
+  Object.assign(settings, drafts[""]);
+  settings.classes = draftClasses.filter(c => c.name.trim());
+  const same = (a,b) => a.max === b.max && a.quick === b.quick && a.bank === b.bank && JSON.stringify(a.req||{}) === JSON.stringify(b.req||{});
+  settings.perClass = {};
+  for (const c of settings.classes){ const d = drafts[c.id]; if (d && !same(d, drafts[""])) settings.perClass[c.id] = d; }
+  saveSettings(); closeModals(); renderPanelConfig();
+  if (!$("home").classList.contains("hidden")) renderHome();
+});
+$("helpBtn").addEventListener("click", () => $("helpModal").classList.add("open"));
+$("helpClose").addEventListener("click", closeModals);
+document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals() }));
+
+// drag a folder onto the start screen = generic mode
+const drop = $("drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", async e => {
+  e.preventDefault(); drop.classList.remove("over");
+  const item = [...e.dataTransfer.items].find(i => i.kind === "file");
+  if (item && item.getAsFileSystemHandle){ const h = await item.getAsFileSystemHandle(); if (h && h.kind === "directory"){ const out=[]; await walk(h,"",out); loadGeneric(h.name,out) } }
+});
+
+/* ================= Keyboard ================= */
+let lastEsc = 0;
+document.addEventListener("keydown", e => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  const modalOpen = !!document.querySelector(".modal.open");
+  if (e.key === "Escape"){
+    if (modalOpen){ closeModals(); return; }
+    if (typing){ document.activeElement.blur(); return; }
+    if (!$("app").classList.contains("hidden")){ if (Date.now() - lastEsc < 600) goBack(); lastEsc = Date.now(); }
+    else if (!$("assignScreen").classList.contains("hidden")){ show("home"); renderHome(); }
+    return;
+  }
+  if (modalOpen) return;
+  // start screens
+  if (!$("home").classList.contains("hidden")){
+    if (/^[1-9]$/.test(e.key) && settings.classes[+e.key-1]) openClass(settings.classes[+e.key-1]);
+    else if (e.key === "?") $("helpModal").classList.add("open");
+    return;
+  }
+  if (!$("assignScreen").classList.contains("hidden")){
+    if (/^[1-9]$/.test(e.key) && assignments[+e.key-1]) openAssignment(assignments[+e.key-1]);
+    else if (e.key === "r") showAssignments();
+    return;
+  }
+  if (!students.length) return;
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); save(); document.activeElement.blur(); step(1); return; }
+  if (e.altKey && /^Digit[1-9]$/.test(e.code)){ e.preventDefault(); addBank(+e.code.slice(5)-1); return; }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (k === "j" || k === "ArrowDown"){ e.preventDefault(); step(1) }
+  else if (k === "k" || k === "ArrowUp"){ e.preventDefault(); step(-1) }
+  else if (k === "n"){ nextUngraded() }
+  else if (k === "ArrowRight"){ e.preventDefault(); if (curFile < students[cur].files.length-1) showFile(curFile+1) }
+  else if (k === "ArrowLeft"){ e.preventDefault(); if (curFile > 0) showFile(curFile-1) }
+  else if (/^[1-9]$/.test(k)){ const q = quickItems()[+k-1]; if (q !== undefined) setScore(q) }
+  else if (k === "s"){ e.preventDefault(); $("score").focus(); $("score").select() }
+  else if (k === "c"){ e.preventDefault(); const c = $("comment"); c.focus(); c.setSelectionRange(c.value.length, c.value.length) }
+  else if (k === "f"){ $("flagBtn").classList.toggle("on"); save() }
+  else if (k === "z"){ if ($("docxHost")){ docxFit = !docxFit; fitDocx() } else { imgState.actual = !imgState.actual; applyImg() } }
+  else if (k === "i"){ if ($("fmtDetail")) toggleFmtDetail() }
+  else if (k === "w"){ openInWord() }
+  else if (k === "r"){ imgState.rot = (imgState.rot + 90) % 360; applyImg() }
+  else if (k === " "){ const m = $("media"); if (m){ e.preventDefault(); m.paused ? m.play() : m.pause() } }
+  else if (k === "o"){ openCurrent() }
+  else if (k === "d"){ downloadCurrent() }
+  else if (k === "/"){ e.preventDefault(); $("search").focus() }
+  else if (k === "?"){ $("helpModal").classList.add("open") }
+});
+document.addEventListener("focusin", e => { if (/^(AUDIO|VIDEO|BUTTON)$/.test(e.target.tagName)) setTimeout(() => e.target.blur(), 0) });
+window.addEventListener("beforeunload", e => { if ($("syncState").textContent === "Saving…"){ e.preventDefault(); e.returnValue = "" } });
+
+$("versionLine").textContent = "LUNA Grader v" + VERSION;
+renderPanelConfig();
+renderHome();
+</script>
+</body>
+</html>
