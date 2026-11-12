@@ -2,7 +2,9 @@
 
 A fast, keyboard-driven way to grade assignments downloaded from **LUNA** (Kwansei Gakuin University's LMS), including scores, feedback comments and late flags, and to send the grades back to LUNA in its own upload format.
 
-It runs entirely in your web browser. **Nothing is uploaded or stored anywhere except your own computer**: student files are read from your folders, and your grades are saved back into those same folders.
+It runs entirely in your web browser, but it is **not an online service**. Student files are read from your own folders and your grades are saved back into those same folders. The page is also **locked by the browser so that it cannot connect to the internet at all** (see [Privacy](#privacy)).
+
+The screens are in **Japanese by default**, with a **日本語 / English** switch on every screen, and a **? Help** page on the start and assignment screens.
 
 **Open the grader:** https://brandonlkramer.github.io/LUNA-Assignment-Grader/ (or download `index.html` from this repository and double-click it in Chrome or Edge).
 
@@ -212,16 +214,26 @@ Because grades are saved in the assignment folder, you can close the browser at 
 | "The folder can't be found any more" | The class folder was moved or renamed. Choose it again when asked. |
 | **LUNA rejects the upload file** ("failed to import XLSX … 0 target") | Make sure you're uploading the **`…comment_format_…_GRADED.xlsx`** file, not the spreadsheet that came inside the zip (`assignment_comment_<number>.xlsx`, which LUNA doesn't accept back). |
 | Something looks out of date after an update | Reload with **⌘⇧R** (Mac) or **Ctrl+Shift+R** (Windows). The version number is at the bottom of the start screen. |
+| The screens are in the wrong language | Use the **日本語 / English** switch at the top right of any screen; the choice is remembered. |
 | A Word file shows a ⚠ font warning | The student used a font that isn't installed on your computer, so the page view substitutes it. The formatting summary still names the real font; press **W** to see it in Word. |
 
 ---
 
 ## Privacy
 
-- The grader is a single web page with no server behind it. Student files and grades are never sent anywhere.
-- All libraries are built into the page, so it makes no network requests at all after loading. You can check this in Chrome's developer tools (Network tab).
-- GitHub only serves the page itself, like any website; it never sees your files or grades.
-- If you prefer, download `index.html` and open it from your own computer. It works exactly the same way, completely offline.
+Opening the grader from a web address can make it look like a website, but it handles student data the way a program on your computer does:
+
+- **Nothing is uploaded.** Student files are read straight from your folders, and scores and comments are saved back into them. There is no server, account or database.
+- **The page cannot connect to the internet.** It carries a browser security rule (a Content Security Policy, `connect-src`, `img-src` and so on) that forbids every network connection. Even a mistake in the code couldn't send data out, because the browser itself would block it. You can check this:
+  - turn off Wi-Fi after the page has opened; everything keeps working;
+  - or open Chrome's developer tools (**View → Developer → Developer Tools → Console**) and run `fetch("https://example.com")`. The browser refuses it, citing the page's Content Security Policy.
+- **Everything is inside one file.** All libraries are built into `index.html`; nothing is loaded from other sites.
+- **GitHub only delivers the page.** Like opening a document from a link, GitHub never sees your files or grades.
+- **For complete independence from any website**, download `index.html` (the help page on the hosted version has a **Save this page to my computer** link) and open the saved file instead. It works the same way, fully offline, and never changes unless you replace it.
+
+What *is* stored, and where:
+- your grades: a small `luna-grader_<number>.json` file in each assignment folder;
+- a backup copy of your grades, your class list, comment banks and settings: inside the browser on your own computer.
 
 ---
 
@@ -266,7 +278,11 @@ Bundled libraries and their licences are listed in [THIRD_PARTY_NOTICES.md](THIR
 
 **LUNA Assignment Grader** は、LUNA からダウンロードした課題をキーボード操作で素早く採点するためのツールです。点数・フィードバックコメント・提出遅れの確認ができ、LUNA の一括登録用ファイル（フィードバックコメント）に採点結果を書き込みます。
 
-**すべてブラウザの中で動作します。** 学生のファイルや採点結果がインターネット上に送信・保存されることはありません。採点結果は、ご自分のパソコンの課題フォルダに保存されます。
+**ブラウザで開きますが、オンラインサービスではありません。** 学生のファイルはパソコン上のフォルダから直接読み込み、採点結果も同じフォルダに保存します。サーバー、アカウント、データベースはありません。さらに、このページは **ブラウザのセキュリティ設定（Content Security Policy）によりインターネットへの接続が一切できないよう制限** されているため、誤ってデータが外部に送られることもありません。Wi-Fi をオフにしても同じように使えます。
+
+ウェブサイトに一切頼らずに使いたい場合は、`index.html` をダウンロードし（公開版のヘルプページにある「このページをパソコンに保存する」から保存できます）、保存したファイルを開いて使ってください。完全にオフラインで動作します。
+
+画面は **日本語が既定** で、各画面右上の **日本語 / English** で切り替えられます。最初の画面と課題一覧の画面の **? ヘルプ** から、使い方の説明を見られます。
 
 ### 必要なもの
 
