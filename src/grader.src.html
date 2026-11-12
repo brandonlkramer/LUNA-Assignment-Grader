@@ -325,7 +325,7 @@ header .spacer{flex:1}
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const VERSION = "0.6.3";
+const VERSION = "0.6.4";
 const LS_SETTINGS = "lunaGrader.settings.v2";
 const DEFAULTS = {
   max: "10", quick: "10, 9, 8, 7, 6, 5, 0",
@@ -398,7 +398,9 @@ function renderHome(){
           <b>Welcome!</b> Start by adding the classes you grade.<br>
           <span class="hint">For each class you'll choose a folder on your computer (for example, the class's own folder), and the grader makes a <b>LUNA Assignments</b> folder inside it.
           For each assignment, put two things from LUNA in that folder: the students' submissions (<b>Batch Download</b>, a .zip file that you need to unzip first) and the grading template (<b>Comment and Grade → Download Format</b>).
-          <button class="link" onclick="openGuide()">Show me how</button></span><br>          <button class="primary" style="margin-top:10px" onclick="openSettings()">Add classes</button></div>`;
+          </span>
+          ${lunaShot()}
+          <span class="hint">On the assignment's page in LUNA: <b>Download</b> (under Batch Download, after clicking “Download all submissions”) and <b>Download Format</b> (under Comment and Grade). <button class="link" onclick="openGuide()">Step-by-step guide</button></span><br>          <button class="primary" style="margin-top:10px" onclick="openSettings()">Add classes</button></div>`;
   });
 }
 $("classList").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) openClass(settings.classes[+b.dataset.c]) });
@@ -529,7 +531,7 @@ async function showAssignments(){
   const {list, notes} = await scanLuna();
   assignments = list;
   const progress = await Promise.all(list.map(a => loadGradeFile(a).then(g => g ? Object.values(g.grades||{}).filter(x => x.score !== "" && x.score != null).length : 0).catch(() => 0)));
-  $("asSub").innerHTML = list.length ? `Choose an assignment (press its number).` : `No assignments yet. Put LUNA's downloads into the <b>${esc(lunaDir.name)}</b> folder${classRoot && classRoot !== lunaDir ? ` inside <b>${esc(classRoot.name)}</b>` : ""}: the unzipped Batch Download and the grading template (Download Format). Then press Refresh. <button class="link" onclick="openGuide()">Show me how</button>`;
+  $("asSub").innerHTML = list.length ? `Choose an assignment (press its number).` : `No assignments yet. Put LUNA's downloads into the <b>${esc(lunaDir.name)}</b> folder${classRoot && classRoot !== lunaDir ? ` inside <b>${esc(classRoot.name)}</b>` : ""}: the unzipped Batch Download and the grading template (Download Format). Then press Refresh. <button class="link" onclick="openGuide()">Step-by-step guide</button>${lunaShot()}`;
   $("assignList").innerHTML = notes.map(n => `<p class="hint" style="color:var(--flag)">${esc(n)}</p>`).join("") + list.map((a,i) => {
     const nSub = a.batch ? new Set(a.batch.files.map(f => idFromName(f.name)).filter(Boolean)).size : 0;
     const nRoster = a.format && a.format.sheet ? a.format.sheet.rows.length : 0;
@@ -1278,6 +1280,7 @@ $("classEdit").addEventListener("click", async e => {
   if (d != null && confirm(`Remove “${draftClasses[+d].name}” from the list? (Its files are not touched.)`)){ draftClasses.splice(+d, 1); renderClassEdit() }
 });
 $("addClass").addEventListener("click", () => { const id = "c" + Date.now().toString(36); keepScopeFields(); drafts[id] = Object.assign({}, drafts[""]); draftClasses.push({id, name:"New class"}); renderClassEdit(); renderScope(scope) });
+function lunaShot(maxw){ const g = document.querySelector("#guideModal img"); return g ? `<img src="${g.src}" alt="Where to download in LUNA: the Download link under Batch Download, and Download Format under Comment and Grade" style="width:100%;max-width:${maxw||560}px;border:1px solid var(--line);border-radius:8px;margin:10px 0 4px;display:block">` : "" }
 function openGuide(){ closeModals(); $("guideModal").classList.add("open") }
 function closeModals(){ document.querySelectorAll(".modal").forEach(m => m.classList.remove("open")) }
 $("settingsBtn").addEventListener("click", openSettings);
