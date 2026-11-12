@@ -1,10 +1,10 @@
-# LUNA Grader
+# LUNA Assignment Grader
 
 A fast, keyboard-driven way to grade assignments downloaded from **LUNA** (Kwansei Gakuin University's LMS), including scores, feedback comments and late flags, and to send the grades back to LUNA in its own upload format.
 
 It runs entirely in your web browser. **Nothing is uploaded or stored anywhere except your own computer**: student files are read from your folders, and your grades are saved back into those same folders.
 
-**Open the grader:** https://YOUR-GITHUB-USERNAME.github.io/2026_Assignment_Grader/ (or download `index.html` from this repository and double-click it).
+**Open the grader:** https://brandonlkramer.github.io/LUNA-Assignment-Grader/ (or download `index.html` from this repository and double-click it in Chrome or Edge).
 
 [日本語の説明は下にあります](#日本語の説明)
 
@@ -36,28 +36,24 @@ Nothing needs to be installed.
 
 ## One-time setup
 
-### 1. Make a "LUNA Assignments" folder for each class
-
-Inside each class's folder on your computer, make a folder called **`LUNA Assignments`**. All of that class's LUNA downloads go here.
-
-```
-Academic Writing/                 ← your class folder (any name, anywhere)
-└── LUNA Assignments/             ← make this
-```
-
-Folders kept in Box, Dropbox, OneDrive or iCloud work fine, and your saved grades then sync with them.
-
-### 2. Add your classes in the grader
+### 1. Add your classes
 
 1. Open the grader and click **Add classes** (or **Edit classes and settings**).
 2. Click **+ Add a class**, type the class name, and repeat for each class.
 3. Click **Save**.
 
-### 3. Choose each class's folder (once)
+### 2. Choose a folder for each class (once)
 
-The first time you open a class, the grader asks you to choose its folder. Choose either the class folder or its `LUNA Assignments` folder. Chrome then asks for permission to view and save files in that folder. Click **Allow** (or **Edit files**).
+The first time you open a class, the grader asks where to keep that class's grading files. Choose any folder, usually the class's own folder on your computer. Chrome then asks for permission to view and save files there; click **Allow** (or **Edit files**).
 
-Chrome remembers the folder. In later sessions you may be asked to click **Allow** once more; that's Chrome protecting your files.
+The grader then **makes a folder called `LUNA Assignments` inside the folder you chose.** All of that class's LUNA downloads go there.
+
+```
+Academic Writing/                 ← the folder you chose
+└── LUNA Assignments/             ← made for you by the grader
+```
+
+Folders in Box, Dropbox, OneDrive or iCloud work fine, and your saved grades then sync with them. Chrome remembers each class's folder; in later sessions you may be asked to click **Allow** once more, which is Chrome protecting your files. You can change a class's folder at any time in **Settings → Choose folder…**.
 
 ---
 
@@ -65,26 +61,25 @@ Chrome remembers the folder. In later sessions you may be asked to click **Allow
 
 ### 1. Download two things from LUNA
 
-For each assignment, download both of these from LUNA into that class's `LUNA Assignments` folder:
+On the assignment's page in LUNA you need two downloads, shown circled below:
 
-| What | What it looks like | Why |
-|---|---|---|
-| **The students' submissions** (batch download) | A folder (or `.zip`) named like `2026_32017003_assignment_status_Week_1_Homework_…` containing files such as `32026337_essay.docx` | The work you're grading. The file names start with each student's ID. |
-| **The feedback-comment upload file** | `2026_32017003_assignment_comment_format_250565.xlsx` | The spreadsheet LUNA accepts back, with one row per student. The grader fills in the scores and comments. |
+![LUNA's assignment page: the Download link under Batch Download, and Download Format under Comment and Grade](download_buttons.png)
 
-Then:
+1. **The students' work.** Under **Batch Download**, click **Download all submissions**. When the **Download (date and time)** link appears below it, click that link. You get a **.zip** file.
+2. **Unzip it into the class's `LUNA Assignments` folder** (Mac: double-click the .zip; Windows: right-click → *Extract All*). This makes a folder named like `2026_32017003_assignment_status_Week_1_Homework_…`, containing files such as `32026337_essay.docx`; each file name starts with the student's ID. **The grader can't read the .zip itself, so this step is needed.**
+3. **The grading template.** Under **Comment and Grade**, click **Download Format**. You get a file named like `2026_32017003_assignment_comment_format_250565.xlsx`: LUNA's upload template, with one row per student. The grader fills in the scores and comments.
+4. **Move the grading template into the unzipped folder from step 2**, so everything for one assignment is together. Leaving it directly in `LUNA Assignments` also works.
 
-- If the submissions arrived as a **`.zip`**, double-click it to unzip it (on Windows: right-click → *Extract All*).
-- **Move the upload file into that assignment's download folder.** This keeps everything for one assignment together. Leaving it directly in `LUNA Assignments` also works.
+The grader has the same instructions with this picture: click **How to download from LUNA** on its start screen.
 
 ```
 LUNA Assignments/
-└── 2026_32017003_assignment_status_Week_1_Homework_…/
-    ├── 32026337_essay.docx                              ← students' work
+└── 2026_32017003_assignment_status_Week_1_Homework_…/       ← unzipped Batch Download
+    ├── 32026337_essay.docx                                    ← students' work
     ├── 32026355_IMG_0655.HEIC
     ├── …
-    ├── assignment_comment_250565.xlsx                   ← comes with the download
-    └── 2026_32017003_assignment_comment_format_250565.xlsx   ← the upload file you moved here
+    ├── assignment_comment_250565.xlsx                         ← comes with the download
+    └── 2026_32017003_assignment_comment_format_250565.xlsx    ← grading template (Download Format)
 ```
 
 The number at the end (here `250565`) is how the grader knows which upload file belongs to which download.
@@ -113,7 +108,7 @@ It is a copy of LUNA's upload file with only the **Score** and **Feedback Commen
 
 ### 5. Upload it to LUNA
 
-In LUNA, go to the assignment's **Batch registration (Feedback Comment)** screen and upload the `_GRADED.xlsx` file.
+On the assignment's page in LUNA, under **Comment and Grade**, click **Reference**, choose the `_GRADED.xlsx` file, then click **Upload**. (These are the buttons next to **Download Format** in the picture above.)
 
 ---
 
@@ -155,7 +150,7 @@ Click **Settings**. Under **Settings for**, choose a class to give it its own se
 - **Quick scores:** for example `10, 9, 8, 7, 6, 5, 0`. The first nine go on keys 1–9. For a simple *none / half / full* scheme, use `0, 5, 10`.
 - **Word formatting requirements (optional):** font, font size, line spacing, margins, paper size and a word range. Each Word file then shows these as green ✓ or red ✗. Leave a box empty to skip that check.
 - **Comment bank:** one comment per line. The first nine can be added with Alt+1–9, and the panel's **edit** link opens this directly.
-- **Classes:** rename classes, change a class's folder (**Choose folder…**), or remove a class. Removing a class never touches its files.
+- **Classes:** rename classes, change a class's folder (**Choose folder…**; a `LUNA Assignments` folder is made inside it if there isn't one), or remove a class. Removing a class never touches its files.
 
 ---
 
@@ -210,11 +205,12 @@ Because grades are saved in the assignment folder, you can close the browser at 
 
 | Problem | What to do |
 |---|---|
-| An assignment says **"upload file not downloaded yet"** | Download the feedback-comment upload file (`…assignment_comment_format_….xlsx`) from LUNA and put it in that assignment's folder. Your grades are safe meanwhile. |
-| A **"still zipped"** or **"download in progress"** message | Wait for the download to finish, unzip it, then press **R** (Refresh). |
+| An assignment says **"grading template not downloaded yet"** | In LUNA, under **Comment and Grade**, click **Download Format**, and move the file into that assignment's folder. Your grades are safe meanwhile. |
+| An assignment says **"students' files not downloaded yet"** | Under **Batch Download**, download and unzip the students' submissions into `LUNA Assignments`. |
+| A **"still zipped"** or **"download in progress"** message | Wait for the download to finish, unzip it, then press **R** (Refresh). The grader can only read unzipped folders. |
 | Chrome asks for permission every time | This is normal Chrome behaviour for folders; click **Allow**. |
 | "The folder can't be found any more" | The class folder was moved or renamed. Choose it again when asked. |
-| **LUNA rejects the upload file** | Make sure you're uploading the **`…comment_format_…_GRADED.xlsx`** file, not the spreadsheet that came inside the download (`assignment_comment_<number>.xlsx`, which LUNA doesn't accept back). |
+| **LUNA rejects the upload file** ("failed to import XLSX … 0 target") | Make sure you're uploading the **`…comment_format_…_GRADED.xlsx`** file, not the spreadsheet that came inside the zip (`assignment_comment_<number>.xlsx`, which LUNA doesn't accept back). |
 | Something looks out of date after an update | Reload with **⌘⇧R** (Mac) or **Ctrl+Shift+R** (Windows). The version number is at the bottom of the start screen. |
 | A Word file shows a ⚠ font warning | The student used a font that isn't installed on your computer, so the page view substitutes it. The formatting summary still names the real font; press **W** to see it in Word. |
 
@@ -233,10 +229,10 @@ Because grades are saved in the assignment folder, you can close the browser at 
 
 ### Publishing on GitHub Pages
 
-1. Create a **public** repository on GitHub (for example `2026_Assignment_Grader`) and push this folder to it.
+1. Create a **public** repository on GitHub (here `LUNA-Assignment-Grader`) and push this folder to it.
 2. On GitHub, open the repository's **Settings → Pages**.
 3. Under **Build and deployment**, choose **Deploy from a branch**, branch **main**, folder **/ (root)**, then **Save**.
-4. After a minute the grader is live at `https://<your-username>.github.io/<repository-name>/`. Put that link at the top of this README.
+4. After a minute the grader is live at `https://<your-username>.github.io/<repository-name>/`, here https://brandonlkramer.github.io/LUNA-Assignment-Grader/.
 
 Every change pushed to `main` goes live for everyone straight away, so test changes locally before pushing.
 
@@ -268,7 +264,7 @@ Bundled libraries and their licences are listed in [THIRD_PARTY_NOTICES.md](THIR
 
 ## 日本語の説明
 
-LUNA からダウンロードした課題を、キーボード操作で素早く採点するためのツールです。点数・フィードバックコメント・提出遅れの確認ができ、LUNA の一括登録用ファイル（フィードバックコメント）に採点結果を書き込みます。
+**LUNA Assignment Grader** は、LUNA からダウンロードした課題をキーボード操作で素早く採点するためのツールです。点数・フィードバックコメント・提出遅れの確認ができ、LUNA の一括登録用ファイル（フィードバックコメント）に採点結果を書き込みます。
 
 **すべてブラウザの中で動作します。** 学生のファイルや採点結果がインターネット上に送信・保存されることはありません。採点結果は、ご自分のパソコンの課題フォルダに保存されます。
 
@@ -279,19 +275,21 @@ LUNA からダウンロードした課題を、キーボード操作で素早く
 
 ### 最初の準備（1回だけ）
 
-1. 各授業のフォルダの中に **`LUNA Assignments`** というフォルダを作ります。
-2. グレーダーを開き、**Add classes** から授業名を登録して **Save** を押します。
-3. 授業を初めて開くときにフォルダの選択を求められるので、その授業のフォルダ（または `LUNA Assignments` フォルダ）を選び、Chrome の確認で **許可** を押します。
+1. grader を開き、**Add classes** から授業名を登録して **Save** を押します。
+2. 授業を初めて開くときに、採点用ファイルを置く場所（通常はその授業のフォルダ）を選び、Chrome の確認で **許可** を押します。
+3. 選んだフォルダの中に、**`LUNA Assignments` フォルダが自動で作成されます。** LUNA からダウンロードしたファイルはここに入れます。
 
 ### 課題ごとの手順
 
-1. LUNA から次の2つを `LUNA Assignments` フォルダにダウンロードします。
-   - **提出物の一括ダウンロード**（`…assignment_status_課題名_…` という名前のフォルダ。zip の場合はダブルクリックで解凍）
-   - **フィードバックコメントの一括登録用ファイル**（`…assignment_comment_format_番号.xlsx`）
-2. 一括登録用ファイルを、その課題のダウンロードフォルダの中に移動します。
-3. グレーダーで授業と課題を番号キーで選び、採点します。入力内容は自動で保存されます。
-4. 採点が終わったら **Save LUNA upload file** を押します。ダウンロードフォルダに `…_GRADED.xlsx` が作成されます。
-5. LUNA の「一括登録（フィードバックコメント）」画面で、その `_GRADED.xlsx` をアップロードします。
+LUNA の課題ページから、次の2つをダウンロードします（上の画像の赤丸の部分です）。
+
+1. **提出物**：「Batch Download」の **Download all submissions** を押し、表示された **Download（日時）** のリンクをクリックします。zip ファイルがダウンロードされます。
+2. **zip を解凍**して、授業の `LUNA Assignments` フォルダに入れます（Mac はダブルクリック、Windows は右クリック →「すべて展開」）。**grader は zip のままでは読み込めません。**
+3. **採点用テンプレート**：「Comment and Grade」の **Download Format** をクリックします（`…assignment_comment_format_番号.xlsx`）。
+4. テンプレートを、手順2で解凍したフォルダの中に移動します。
+5. grader で授業と課題を番号キーで選び、採点します。入力内容は自動で保存されます。
+6. 採点が終わったら **Save LUNA upload file** を押します。課題フォルダに `…_GRADED.xlsx` が作成されます。
+7. LUNA の課題ページの「Comment and Grade」で **Reference**（参照）からその `_GRADED.xlsx` を選び、**Upload** を押します。
 
 ### 主なキー操作
 
